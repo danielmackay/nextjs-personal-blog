@@ -16,6 +16,7 @@ const siteMetadata = {
   //facebook: '',
   //youtube: '',
   linkedin: 'https://www.linkedin.com/in/danieljamesmackay',
+  stackoverflow: 'https://stackoverflow.com/users/676220/daniel-mackay',
   locale: 'en-US',
   analytics: {
     // If you want to use an analytics provider you have to add it to the
