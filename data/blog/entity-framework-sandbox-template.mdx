@@ -1,0 +1,139 @@
+---
+title: Entity Framework Sandbox Template
+date: '2022-12-10'
+lastmod: '2022-12-30'
+tags: ['entity-framework', 'template']
+draft: false
+summary: The Entity Framework Sandbox Template provides a dotnet CLI command to get you up and running fast with EF7, several entities, and a populated database.
+images: ['/static/images/entity-framework-sandbox-template/banner.png']
+layout: PostLayout
+---
+
+![Banner](/static/images/entity-framework-sandbox-template/banner.png)
+
+## Overview
+
+With the recent GA launch of [EF7 (i.e. EF Core 7)](https://devblogs.microsoft.com/dotnet/announcing-ef7/), I thought I'd roll up my sleeves and try out some of the new features.  However, to do this I would need a basic EF7 setup, running in an application, and pointing to a database populated with some data.  
+
+I wanted to keep things simple so I started with a console application, created several entities, enabled migrations and ensured it had some seed data.  As I started looking at the EF configuration required to test the new features, it became clear to me that I would need a different DB Model and EF setup for each example.
+
+This lead me to the idea, that perhaps it would be useful to create a template that enabled a populated EF project to be rapidly created.
+
+## Entity Framework Sandbox Template
+
+The Entity Framework Sandbox is a CLI project template that allows you to quickly spin up a functioning project running on the latest version of EF with a real database and real data.
+
+This can be useful in the following scenarios:
+
+- Exploring new features of EF such as
+- Safely exploring changes to a real application
+- Replicating EF issues in an isolated environment
+
+>
+> This is intended to be a tool to help you learn EF.  It is not intended to be a starting point for a production application.
+>
+
+## Features
+
+The template includes the following:
+
+- CLI command for creating a new solution
+- Blog/Post/Tag entities
+- Migrations and seed data
+- Logging of generated SQL
+- Model configuration
+- Placeholders for running commands and queries
+
+## Setup
+
+### Template Installation
+
+Install the dotnet CLI template via:
+
+```powershell
+dotnet new --install EntityFrameworkSandbox.Template 
+```
+
+### Project Creation
+
+You can use the template to create a new project via:
+
+```powershell
+mkdir my-ef-sandbox
+cd my-ef-sandbox
+dotnet new ef-sandbox
+```
+
+Alternatively, you can create the project directly into a new sub-folder via:
+
+```powershell
+dotnet new ef-sandbox --name my-sub-folder
+```
+
+## Usage
+
+### Writing Commands & Queries
+
+- Ensure the connection matches if you are using something other than local DB
+- Update the `Sandbox` to run your own EF queries and commands
+
+```csharp
+private async Task RunQueries()
+{
+    // NOTE: Further DB queries go here
+}
+```
+
+```csharp
+private Task RunCommands()
+{
+    // NOTE: Further DB commands go here
+}
+```
+
+### Overriding Model Configuration
+
+This can be done in the configuration classes:
+
+```csharp
+internal class PostConfiguration : IEntityTypeConfiguration<Post>
+{
+    public void Configure(EntityTypeBuilder<Post> builder)
+    {
+        // NOTE: Custom model configuration goes here
+    }
+}
+```
+
+### Schema Changes
+
+The project is designed to use migrations for schema upgrades.  However, if you prefer to instead drop and create the DB every time you can set `Application.EnableMigrations` to `false` in `appsettings.json`:
+
+```json
+"Application": {
+    "EnableMigrations": false
+}
+```
+
+### Running the Project
+
+Pressing F5 or running `dotnet run` will cause the following to happen:
+
+- Console will start
+- By default, DB will be dropped & re-created
+- Data will be seeded
+- SQL queries will run
+- All SQL and results output to the console
+
+## Summary
+
+In this article, I have shown some of the reasons that a sandbox may be useful for EF7.  I have shown how to install the template, use the CLI command, and how to use the template to test commands, queries, and model configuration.  
+
+Let me know if you find this useful, or have any suggestions for improvements.  Better yet, for the repo and submit a [pull request]((https://github.com/danielmackay/dotnet-ef-sandbox)).
+
+Now it's back to learning all the awesome new features of EF7. 😎
+
+## References
+
+- [EF7 Announcement](https://devblogs.microsoft.com/dotnet/announcing-ef7/)
+- [dotnet-ef-sandbox](https://github.com/danielmackay/dotnet-ef-sandbox)
