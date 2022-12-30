@@ -9,6 +9,10 @@ import TOCInline from './TOCInline'
 import Pre from './Pre'
 import { BlogNewsletterForm } from './NewsletterForm'
 import type { Blog, Authors } from 'contentlayer/generated'
+import BicepSeriesHeader from './bicep/BicepSeriesHeader'
+import BicepSeriesResources from './bicep/BicepSeriesResources'
+import BitBucketPipelinesSeriesHeader from './bit-bucket/BitBucketPipelinesSeriesHeader'
+import BitBucketPipelinesSeriesResources from './bit-bucket/BitBucketPipelinesSeriesResources'
 
 interface MDXLayout {
   layout: string
@@ -33,6 +37,10 @@ export const MDXComponents: ComponentMap = {
   pre: Pre,
   wrapper: Wrapper,
   BlogNewsletterForm,
+  BicepSeriesHeader,
+  BicepSeriesResources,
+  BitBucketPipelinesSeriesHeader,
+  BitBucketPipelinesSeriesResources
 }
 
 export const MDXLayoutRenderer = ({ layout, content, ...rest }: MDXLayout) => {
