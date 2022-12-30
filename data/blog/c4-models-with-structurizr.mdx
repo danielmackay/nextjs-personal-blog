@@ -1,0 +1,272 @@
+﻿---
+title: 'Software Diagrams - C4 Models with Structurizr'
+date: '2022-11-16'
+lastmod: '2022-12-30'
+tags: ['c4-model', 'structurizr', 'architecture']
+draft: false
+summary: 'An overview of the C4 model, including main and supplementary diagram types.  After the introduction, we then compare of modelling vs diagrams and show examples of these with Structurizr.'
+images: ['/static/images/bicep/bicep6.png']
+# canonicalUrl: https://tailwind-nextjs-starter-blog.vercel.app/blog/introducing-tailwind-nextjs-starter-blog
+---
+
+![Banner](/static/images/c4-models-with-structurizr/banner.png)
+
+## Overview
+
+In my last [blog post](https://www.dandoescode.com/blog/plantuml-vs-mermaid/), we explored different types of diagrams we can use to describe a software system.  We contrasted creating these diagrams in both Mermaid and PlantUML.  One of the diagrams I touched on was from *C4 Models*.  In this blog post we'll dive into C4 models a litter deeper and look at some of the reasons they are so effective.  We'll also take a look at the difference between *modelling* and *diagrams*.
+
+## C4 Models
+
+The best way to explain the concept is to think about how we use Google Maps.  When we are exploring an area in Google Maps, we will often start zoomed out to help us get context.  Once we find the rough area, we are interested in we can zoom in to get a little more detail.  From there we can find a further area of interest where we can zoom in even more and get even more detail.  C4 models works in the same way.  There are 4 levels of diagrams, with each level providing more detail than the last.
+
+### Level 1: System Context diagram
+
+This level is the most zoomed out.  The diagram concentrates on actors (customers with specific roles) and systems.  Systems could be the ones we control, or they could be external systems we depend on.  The system this diagram focuses on is the one we are building or are responsible for.  It will container one or more moving parts (i.e., Containers).  This is our big picture view that doesn't provide much detail but helps provide context.
+
+### Level 2: Container diagram
+
+This is the next level of zoom, which is often the most interesting.  Containers are usually anything that hosts code or stores data.  Examples of container are:
+
+- Single page applications
+- Web servers
+- Virtual machines
+- Serverless functions
+- Databases
+- Blob storage
+- Message buses
+
+Container diagrams still show actors and can also reference external systems.
+
+### Level 3: Component diagram
+
+The next level of zoom is the component diagram.  This shows the major structural building blocks of your application and their interactions.  This is not a 1-1 mapping of your application, but often a *conceptual view* of your application.  The term *component* is loose here.  It could mean a React or Blazor component. But it could also represent a controller, or service containing business logic.
+
+### Level 4: Code diagram
+
+The deepest level of zoom is the code diagram.  In contrast with the component diagram above, this *is* a 1-1 mapping with your code.  Although this diagram exists, it is often not used as the code paints a very similar picture.
+
+### Supplementary diagrams
+
+Besides the 4 diagrams above there are a few more worth noting:
+
+- System Landscape diagram: The context diagram provides a view of a single software system.  The System Landscape Diagram shows the collection of all software systems.  We can consider this an *enterprise diagram*.
+- Deployment diagram: When deploying to infrastructure, there are often additional services such networking, CDNs, gateways, load balancers, resource groups.  These are considered separate to containers, but still need to be considered for deployments.  We can consider this similar to a *cloud architecture diagram*.
+- Dynamic diagram: This can be a cutdown version of any of the diagrams above to show a specific feature or use case.  You can think of this as being similar to a *sequence diagram*.
+
+### Modelling vs Diagramming
+
+Now that we've covered the different types of C4 diagrams, there is one more important concept to cover - *modelling vs diagrams*.
+
+*Modelling* is the act of *describing* your system.  We can describe the actors, systems, containers, components and their relationships.  But modelling can be viewed as the data without the presentation.  Modelling does not determine, *how* we will depict this data.
+
+*Diagramming* is essentially drawing pictures to visually represent our model.
+
+This distinction becomes powerful when we can create a single model and reuse different elements of it in different diagrams.  This allows us to apply the DRY principle to our diagrams.
+
+## Structurizr
+
+So far, we've covered a lot of theory.  What do these diagrams look like, and what tooling can we use?  My last [blog post](https://www.dandoescode.com/blog/plantuml-vs-mermaid/) showed a very brief look at using PlantUML and Mermaid.  PlantUML did a reasonable job, but Mermaid was unfortunately lack lustre.
+
+Enter - Structurizr! 🙌
+
+Structurizr is an awesome tool that enables us to model a system using a custom DSL.  We can then use that model to create multiple diagrams.
+
+### Setup
+
+There are a few different [versions of Structurizr](https://structurizr.com/products).  For our purposes Structurizr Lite works fantastic.  This can be installed locally via docker (recommended) or spring boot.
+
+To install via docker we first need to pull the image from docker hub:
+
+```powershell
+docker pull structurizr/lite
+```
+
+Next we need to run the container exposing a port on the host, and a path to our working directory.  For example:
+
+```powershell
+docker run -it --rm -p 8080:8080 -v C:Code/FolderName/usr/local/structurizr structurizr/lite
+```
+
+One caveat to be aware of is that one docker image can only point to one working directory.  So, if you have several workspaces in different directories, you'll need to have one container running for each of them.  We can get around this by writing a helper script for the container creation and manage them via docker desktop.
+
+The following script starts a container and requires a hostPort, hostFolder, and containerName
+
+```powershell
+param(
+    [Parameter(Mandatory)]
+    [int]$hostPort,
+
+    [Parameter(Mandatory)]
+    [string]$hostFolder,
+
+    [Parameter(Mandatory)]
+    [string]$containerName
+)
+
+docker run -d --name "structurizr-$containerName" -p $hostPort":8080" -v $hostFolder":/usr/local/structurizr" structurizr/lite
+```
+
+This allows us to easily spin up Structurizr contains.  Once the container has been created, we can view, inspect and manage them via docker desktop:
+
+![Docker Desktop](/static/images/c4-models-with-structurizr/docker-desktop.png)
+
+### Examples
+
+So now that we have our container running, we can start working on our model and diagrams.
+
+#### Model
+
+Let's use an example of an ecommerce system.  In such a system we would have model that looks like:
+
+```dsl
+    model {
+
+        enterprise {
+
+            customerPerson = person "Customer"
+            warehousePerson = person "Warehouse Staff"
+
+            ecommerceSystem = softwareSystem "E-Commerce" {
+                storeContainer = container "Store SPA" "E-Commerce Store" "React" "Browser,Microsoft Azure - Static Apps,Azure"
+                stockContainer = container "Stock Management SPA" "Order fufillment, stock management, order dispatch" "React" "Browser,Microsoft Azure - Static Apps,Azure"
+                dbContainer = container "Database" "Customers, Orders, Payments" "SQL Server" "Database,Microsoft Azure - Azure SQL,Azure"
+                apiContainer = container "API" "Backend" "ASP.NET Core" "Microsoft Azure - App Services,Azure" {
+                group "Web Layer" {
+                    policyComp = component "Authorization Policy" "Authentication and authorization" "ASP.NET Core"
+                    controllerComp = component "API Controller" "Requests, responses, routing and serialisation" "ASP.NET Core"
+                    mediatrComp = component "MediatR" "Provides decoupling of requests and handlers" "MediatR"
+                }
+                group "Application Layer" {
+                    commandHandlerComp = component "Command Handler" "Business logic for changing state and triggering events" "MediatR request handler"
+                    queryHandlerComp = component "Query Handler" "Business logic for retrieving data" "MediatR request handler"
+                    commandValidatorComp = component "Command Validator" "Business validation prior to changing state" "Fluent Validation"
+                }
+                group "Infrastructure Layer" {
+                    dbContextComp = component "DB Context" "ORM - Maps linq queries to the data store" "Entity Framework Core"
+                }
+                group "Domain Layer" {
+                    domainModelComp = component "Model" "Domain models" "poco classes"
+                }
+            }
+        }
+
+        emailSystem = softwareSystem "Email System" "Sendgrid" "External"
+
+        # relationships between people and software systems 
+        customerPerson -> storeContainer "Placers Orders" "https"
+        warehousePerson -> stockContainer "Dispatches Orders" "https"
+        apiContainer -> emailSystem "Trigger emails" "https"
+        emailSystem -> customerPerson "Delivers emails" "https"
+        
+        # relationships to/from containers
+        stockContainer -> apiContainer "uses" "https"
+        storeContainer -> apiContainer "uses" "https"
+        apiContainer -> dbContainer "persists data" "https"
+
+        # relationships to/from components
+        dbContextComp -> dbContainer "stores and retrieves data"
+        storeContainer -> controllerComp "calls"
+        stockContainer -> controllerComp "calls"
+        controllerComp -> policyComp "authenticated and authorized by"
+        controllerComp -> mediatrComp "sends queries & commands to"
+        mediatrComp -> queryHandlerComp "sends query to"
+        mediatrComp -> commandValidatorComp "sends command to"
+        commandValidatorComp -> commandHandlerComp "passes command to"
+        queryHandlerComp -> dbContextComp "Gets data from"
+        commandHandlerComp -> dbContextComp "Update data in"
+        dbContextComp -> domainModelComp "contains collections of"
+    }
+```
+
+For the full DSL see [here](https://github.com/danielmackay/structurizr-blog-example/blob/main/workspace.dsl).
+
+There is a bit going on here, but the syntax of the DSL is fairly straightforward and maps well to the concepts explained above.  Let's look closer at the syntax of a container.
+
+Containers are defined with the format:
+
+```powershell
+[variableName] container = [name] [description] [technology] [tags]
+```
+
+- `variableName`: this is used to refer to the container elsewhere in the model (for example in relationships)
+- `name`: the name of our container
+- `description`: a description of what our container is responsible for
+- `technology`: the major technology of the container (e.g. ASP.NET Core, SQL Server, Service Bus, etc)
+- `tags`: tags are optional but can be used to alter the appearance of the container.  Some themes rely on these.
+
+Relationships are defined with the format:
+
+```powershell
+[entityFrom] -> [entityTo] [relationship] [transport]
+```
+
+- `entityFrom/entityTo`: the entities this relationship is between
+- `relationship`: an action to describe the relationship
+- `transport`: how the communication happens (e.g. HTTPS, gRPC, WebSockets)
+
+#### Context
+
+Now that we have our model, diagrams become trivial.  A context diagram can be rendered with:
+
+```powershell
+systemContext ecommerceSystem "Context" {
+    include * emailSystem
+    autoLayout
+}
+```
+
+The view above will give us this diagram:
+
+![Context Diagram](/static/images/c4-models-with-structurizr/structurizr-1-Context.png)
+
+#### Container
+
+A container diagram can be generated with this view:
+
+```powershell
+container ecommerceSystem "Container" {
+    include *
+}
+```
+
+Which generates this diagram:
+
+![Container Diagram](/static/images/c4-models-with-structurizr/structurizr-1-Container.png)
+
+#### Component
+
+A component diagram can be generated with this view:
+
+```powershell
+component apiContainer "Component" {
+    include * customerPerson warehousePerson
+    autoLayout
+}
+```
+
+Which generates this diagram:
+
+![Component Diagram](/static/images/c4-models-with-structurizr/structurizr-1-Component.png)
+
+### Additional Structurizr Features
+
+Besides generating diagrams from models, Structurizr can also be used to document architectures.  It does this by providing an area for documentation, and another one for ADR's (Architectural Decision Records).
+
+## Summary
+
+In this post we've seen an introduction to C4 models and different notations it provides.  We've seen how we can start zoomed out for the big picture, then zoom in to systems of interest to get further detail.  This helps us to make sense of both new and existing systems.  We've looked at the differences between modelling and diagramming and seen the main advantage of this is that it enables us to keep our diagrams DRY.
+
+We also looked at how Structurizr provides a DSL we can use to generate models, diagrams, documentation, and ADRs.
+
+We've also seen that compared to [Mermaid and PlantUML]((https://www.dandoescode.com/blog/plantuml-vs-mermaid/)), Structurizr is the premium option for generate C4 diagrams IMHO.  
+
+Get out there and get Stucturizing with C4 models! 😎
+
+## References
+
+- [C4 Model](https://c4model.com/)
+- [Diagrams as Code 2.0](https://youtu.be/Za1-v4Zkq5E)
+- [Structurizr](https://structurizr.com/help/dsl)
+- [Structurizr Getting Started](https://structurizr.com/share/76352/documentation)
+- [Structurizr Reference](https://github.com/structurizr/dsl/blob/master/docs/language-reference.md)
+- [Source Code](https://github.com/danielmackay/structurizr-blog-example)
