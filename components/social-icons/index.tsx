@@ -7,7 +7,6 @@ import Twitter from './twitter.svg'
 import StackOverflow from './stackoverflow.svg'
 import Work from './ssw.svg'
 
-
 // Icons taken from: https://simpleicons.org/
 
 const components = {
@@ -18,7 +17,7 @@ const components = {
   linkedin: Linkedin,
   twitter: Twitter,
   stackoverflow: StackOverflow,
-  work: Work
+  work: Work,
 }
 
 const SocialIcon = ({ kind, href, size = 8 }) => {
