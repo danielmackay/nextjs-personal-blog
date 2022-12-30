@@ -1,0 +1,107 @@
+﻿---
+title: 'Running Optimizely (EPiServer) CMS on Ubuntu with .NET 5'
+date: '2021-07-11'
+lastmod: '2022-12-30'
+tags: ['dotnet', 'cms', 'optimizely', 'ubuntu', 'docker']
+draft: false
+summary: 'An experiment to see if we can run Optimizely CMS on WSL2/Ubuntu with .NET 5.  SQL Server will also run on Ubuntu via Docker containers.'
+images: ['/static/images/optimizely-dotnet-5-ubuntu/banner.png']
+# canonicalUrl: https://tailwind-nextjs-starter-blog.vercel.app/blog/introducing-tailwind-nextjs-starter-blog
+---
+
+![Optimizely Loves Linux](/static/images/optimizely-dotnet-5-ubuntu/banner.png)
+
+## Overview
+Hello friends!  For some time now, I've been using .NET 5 in my daily job.  Among many other things, I love the cross-platform nature that the modern .NET platform provides.  This is especially useful when it comes to which tools you can use for things like build pipelines.  Being able to run on Linux opens many doors.
+
+Historically Optimizely (formerly EPiServer) has run on .NET Full Framework, which only runs on windows.  I have recently found out that there is now a Optimizely preview that runs on .NET 5.  Will this run on Linux?  Lets find out! 😀
+
+In this article we will attempt to run an Optimizely CMS, on WSL2 (Windows Subsystem for Linux) Ubuntu, and using docker for the SQL Server database.
+
+*NOTE: Recently EPiServer was renamed to Optimizely.  However, most of the code and tools still uses the 'EPiServer' name.*
+
+## Pre-requisites
+For this to work we will need the following:
+- [WSL2](https://docs.microsoft.com/en-us/windows/wsl/install-win10)
+- [Ubuntu 20-04](https://www.microsoft.com/en-au/p/ubuntu-2004-lts/9n6svws3rx71)
+- [.NET 5 SDK](https://tecadmin.net/how-to-install-net-core-on-ubuntu-20-04)
+- [Docker](https://docs.docker.com/engine/install/ubuntu)
+
+Optional:
+- [Manage Docker as non-root user](https://docs.docker.com/engine/install/linux-postinstall/)
+
+## Clone Optimizely .NET 5 Preview
+
+From within WSL2/Ubuntu, we will first clone the [Optimizely .Net 5 Preview](https://github.com/episerver/netcore-preview).  I find this easiest to do via VS Code.
+
+Once cloned we can do a `dotnet build` at the repo root.  This will restore all needed packages and build the solution on Linux.  Neat!
+
+*NOTE: There are a quite a few warnings in the solution.  Hopefully this will be fixed soon*
+
+## Running SQL Server in Docker on Ubuntu
+
+This part is a little tricky and relies on docker correctly being setup.
+
+To test our setup, we can run a `sudo docker run hello-world` and if successful we will see the following:
+
+![Docker Hello World](/static/images/optimizely-dotnet-5-ubuntu/docker-hello-world.png)
+
+If you have installed docker, but the above doesn't work you may need to manually start the Docker Daemon by running `sudo service docker start`
+
+Now that we have confirmed we can successfully run a docker container, we can run our SQL Server container.  This can be done by running the following:
+
+```
+sudo docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=Password1?" \
+   -p 1433:1433 --name sql1 -h sql1 \
+   -d mcr.microsoft.com/mssql/server:2019-latest
+```
+
+We can confirm the container started successfully by running `docker ps`:
+
+![SQL Server](/static/images/optimizely-dotnet-5-ubuntu/sql-server.png)
+
+*NOTE: When SQL Server is running in a container, your data will be persisted between restarts and stopping your container.  However, if you remove the container ALL your data will be gone.  For our purposes this is fine, but for most scenarios we would want to properly persist our data by mounting a volume.*
+
+## Initialise Database
+To initialize SQL server with an EPiServer database, we first need to install the EPiServer CLI:
+
+```
+dotnet tool install EPiServer.Net.Cli --global --add-source https://pkgs.dev.azure.com/EpiserverEngineering/netCore/_packaging/beta-program/nuget/v3/index.json --version 1.0.0-pre-020034
+```
+
+We can then create the EPiServer database by running the following from the `Alloy` directory:
+
+```
+dotnet-episerver create-cms-database Alloy.csproj -S localhost -U SA -P "Password1?"
+```
+
+If this command successfully ran, we will see the `EPiServerDB` connection string in `appsettings.json` will have been updated.  We will need to copy this connection string and also paste it into `appsettings.Development.json`.
+
+## Running the Solution
+
+If all has gone well up to this point we can now run the solution by running `dotnet run` from the `Alloy` directory:
+
+![dotnet run](/static/images/optimizely-dotnet-5-ubuntu/dotnet-run.png)
+
+A handy tricky to launch this in your browser on Windows is to *CTRL+Click* the localhost URL.  The first time we run this we will be prompted to configure an admin user.  Once this is done, we should see Alloy running in your browser!
+
+![Alloy](/static/images/optimizely-dotnet-5-ubuntu/alloy.png)
+
+To access the CMS admin, the URL has changed slightly now that we are no longer using web forms (thank god!).  To access the admin backend, we can navigate to `http://localhost:57728/util/login`:
+
+![Login](/static/images/optimizely-dotnet-5-ubuntu/login.png)
+
+After entering the admin credentials, we specified when the site first ran we can access the Optimizely admin backend:
+
+![Admin](/static/images/optimizely-dotnet-5-ubuntu/admin.png)
+
+Amazing! 😎
+
+## Summary
+In this article, we've seen how Optimizely can run on WSL2/Ubuntu with .NET 5.  We ran SQL Server in a docker container to keep our machine clean. We initialised the database, hooked it up to our CMS, and ran the application.
+
+This opens a lot of doors for Optimizely.  Now that we are no longer restricted to windows, we are able to use any of the modern build pipelines (Bit Bucket Pipelines, GitHub, etc).  We could run Optimizely as part of a Kubernetes cluster.  Or we could even get our frontend developers to spin up the CMS on their Mac's without any more excuses. 😉
+
+## Resources
+- [QuickStart: Run SQL Server container images with Docker](https://docs.microsoft.com/en-us/sql/linux/quickstart-install-connect-docker?view=sql-server-ver15&pivots=cs1-bash)
+- [SQL Server Linux Docker Container deployment](https://docs.microsoft.com/en-us/sql/linux/sql-server-linux-docker-container-deployment?view=sql-server-ver15&pivots=cs1-bash)
