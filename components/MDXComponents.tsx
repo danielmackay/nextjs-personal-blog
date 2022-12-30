@@ -40,7 +40,7 @@ export const MDXComponents: ComponentMap = {
   BicepSeriesHeader,
   BicepSeriesResources,
   BitBucketPipelinesSeriesHeader,
-  BitBucketPipelinesSeriesResources
+  BitBucketPipelinesSeriesResources,
 }
 
 export const MDXLayoutRenderer = ({ layout, content, ...rest }: MDXLayout) => {
