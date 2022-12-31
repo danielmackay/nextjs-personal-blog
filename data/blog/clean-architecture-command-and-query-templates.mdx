@@ -10,7 +10,7 @@ canonicalUrl: https://beta.dandoescode.com/blog/clean-architecture-command-and-q
 ---
 
 ## Introduction
-Recently, we have been building a .NET Core Web API using the [Clean Architecture template](TODO).  A key part of this is using CQRS instead of having a service layer.  I'm a big fan of this approach as it allows you to focus on individual operations, and avoids ending up with bloated service classes that are doing too much and violating the [Single Responsibility Principle](TODO).
+Recently, we have been building a .NET Core Web API using the [Clean Architecture template](https://github.com/jasontaylordev/CleanArchitecture).  A key part of this is using CQRS instead of having a service layer.  I'm a big fan of this approach as it allows you to focus on individual operations, and avoids ending up with bloated service classes that are doing too much and violating the [Single Responsibility Principle](https://en.wikipedia.org/wiki/Single-responsibility_principle).
 
 However, after finishing several features we quickly realised that we ended up creating A LOT of commands and queries, all of which have a similar structure.  So I set out to find some sort of templating engine that could help with the boilerplate code.
 
