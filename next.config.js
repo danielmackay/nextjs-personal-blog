@@ -14,7 +14,7 @@ const ContentSecurityPolicy = `
   connect-src *;
   font-src 'self';
   frame-src https://vercel.live https://disqus.com/;
-  prefetch-src https://c.disquscdn.com https://disqus.com
+  prefetch-src 'self' https://c.disquscdn.com https://disqus.com
 `
 
 const securityHeaders = [
