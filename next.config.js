@@ -74,11 +74,11 @@ module.exports = withContentlayer(
     async headers() {
       return [
         {
-          source: '/(.*)',
+          source: '/:path*',
           headers: securityHeaders,
         },
         // {
-        //   source: '/dandoescode.disqus.com/(.*)',
+        //   source: '/dandoescode.disqus.com/:path*',
         //   headers: [
         //     { key: 'Access-Control-Allow-Credentials', value: 'true' },
         //     { key: 'Access-Control-Allow-Origin', value: '*' },
