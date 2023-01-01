@@ -7,13 +7,14 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 // You might need to insert additional domains in script-src if you are using external services
 const ContentSecurityPolicy = `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline' giscus.app https://www.google-analytics.com https://www.googletagmanager.com https://vercel.live;
-  style-src 'self' 'unsafe-inline';
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.google-analytics.com https://www.googletagmanager.com https://vercel.live https://dandoescode.disqus.com https://c.disquscdn.com https://launchpad-wrapper.privacymanager.io https://launchpad.privacymanager.io;
+  style-src 'self' 'unsafe-inline' https://c.disquscdn.com;
   img-src * blob: data: ;
   media-src 'none';
   connect-src *;
   font-src 'self';
-  frame-src giscus.app https://vercel.live
+  frame-src https://vercel.live https://disqus.com/;
+  prefetch-src https://c.disquscdn.com https://disqus.com
 `
 
 const securityHeaders = [
@@ -67,7 +68,7 @@ module.exports = withContentlayer(
     async headers() {
       return [
         {
-          source: '/(.*)',
+          source: '/:path*',
           headers: securityHeaders,
         },
       ]
