@@ -115,17 +115,17 @@ module.exports = withContentlayer(
         },
         {
           source: '/blog/bit-bucket-pipelines-part-three-deploying-static-site-to-azure',
-          destination: 'blog/bit-bucket-pipelines/part-three-deploying-static-site-to-azure',
+          destination: '/blog/bit-bucket-pipelines/part-three-deploying-static-site-to-azure',
           permanent: true,
         },
         {
           source: '/blog/unit-testing-dotnet-core-with-xunit-part-one',
-          destination: '/og/xunit-unit-testing/part-one',
+          destination: '/blog/xunit-unit-testing/part-one',
           permanent: true,
         },
         {
           source: '/blog/unit-testing-dotnet-core-with-xunit-part-two',
-          destination: 'blog/xunit-unit-testing/part-two',
+          destination: '/blog/xunit-unit-testing/part-two',
           permanent: true,
         },
       ]
