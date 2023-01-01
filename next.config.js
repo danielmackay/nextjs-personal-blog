@@ -91,5 +91,44 @@ module.exports = withContentlayer(
 
       return config
     },
+    async redirects() {
+      return [
+        {
+          source: '/blog/bicep-part-one',
+          destination: '/blog/bicep/part-one',
+          permanent: true,
+        },
+        {
+          source: '/blog/bicep-part-two',
+          destination: '/blog/bicep/part-two',
+          permanent: true,
+        },
+        {
+          source: '/blog/bit-bucket-pipelines-part-one-building-and-testing-aspnet-core',
+          destination: '/blog/bit-bucket-pipelines/part-one-building-and-testing-aspnet-core',
+          permanent: true,
+        },
+        {
+          source: '/blog/bit-bucket-pipelines-part-two-deploying-aspnet-core-to-azure',
+          destination: '/blog/bit-bucket-pipelines/part-two-deploying-aspnet-core-to-azure',
+          permanent: true,
+        },
+        {
+          source: '/blog/bit-bucket-pipelines-part-three-deploying-static-site-to-azure',
+          destination: '/blog/bit-bucket-pipelines/part-three-deploying-static-site-to-azure',
+          permanent: true,
+        },
+        {
+          source: '/blog/unit-testing-dotnet-core-with-xunit-part-one',
+          destination: '/blog/xunit-unit-testing/part-one',
+          permanent: true,
+        },
+        {
+          source: '/blog/unit-testing-dotnet-core-with-xunit-part-two',
+          destination: '/blog/xunit-unit-testing/part-two',
+          permanent: true,
+        },
+      ]
+    },
   })
 )
