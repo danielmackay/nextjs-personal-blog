@@ -11,10 +11,9 @@ const CustomLink = ({
 
   if (isInternalLink) {
     return (
-      <Link href={href}>
-        <a {...rest} />
-      </Link>
-    )
+      (<Link href={href} {...rest}>
+      </Link>)
+    );
   }
 
   if (isAnchorLink) {
