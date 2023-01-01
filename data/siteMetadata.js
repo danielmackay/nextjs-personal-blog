@@ -5,7 +5,7 @@ const siteMetadata = {
   description: 'Personal blog',
   language: 'en-us',
   theme: 'system', // system, dark or light
-  siteUrl: 'https://dandoescode.vercel.app',
+  siteUrl: 'https://beta.dandoescode.com',
   siteRepo: 'https://github.com/danielmackay/nextjs-blog-v2',
   siteLogo: '/static/images/logo.png',
   image: '/static/images/avatar.png',
@@ -26,7 +26,7 @@ const siteMetadata = {
     plausibleDataDomain: '', // e.g. tailwind-nextjs-starter-blog.vercel.app
     simpleAnalytics: false, // true or false
     umamiWebsiteId: '', // e.g. 123e4567-e89b-12d3-a456-426614174000
-    googleAnalyticsId: '', // e.g. UA-000000-2 or G-XXXXXXX
+    googleAnalyticsId: 'UA-41948097-2', // e.g. UA-000000-2 or G-XXXXXXX
   },
   newsletter: {
     // supports mailchimp, buttondown, convertkit, klaviyo, revue
