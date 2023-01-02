@@ -33,7 +33,7 @@ interface Props {
 }
 
 export default function PostLayout({ content, authorDetails, next, prev, children }: Props) {
-  const { slug, date, title, tags } = content
+  const { slug, date, title, tags, readingTime } = content
 
   return (
     <SectionContainer>
@@ -59,6 +59,9 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
               </dl>
               <div>
                 <PageTitle>{title}</PageTitle>
+                <span className="inline-block mt-2 text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
+                  {readingTime.text}
+                </span>
               </div>
             </div>
           </header>
