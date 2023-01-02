@@ -1,6 +1,6 @@
 ![tailwind-nextjs-banner](/public/static/images/twitter-card.png)
 
-# Dan Does Code Blog
+# [Dan Does Code Blog](https://www.dandoescode.com/)
 
 > Based off [tailwind-nextjs-starter-blog](https://GitHub.com/timlrx/tailwind-nextjs-starter-blog)
 
