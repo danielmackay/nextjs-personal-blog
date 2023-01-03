@@ -23,8 +23,7 @@ const Analytics = () => {
       {isProduction && siteMetadata.analytics.simpleAnalytics && <SimpleAnalytics />}
       {isProduction && siteMetadata.analytics.umamiWebsiteId && <Umami />}
       {isProduction && siteMetadata.analytics.googleAnalyticsId && <GA />}
-      {/* DM TODO: Do I need to only include VercelAnalytics for production? */}
-      <VercelAnalytics />
+      {isProduction && <VercelAnalytics />}
     </>
   )
 }
