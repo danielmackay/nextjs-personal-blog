@@ -14,7 +14,7 @@ layout: PostLayout
 
 When I first created my blog it was created from a [Gatsby Starter Blog](https://www.gatsbyjs.com/starters/gatsbyjs/gatsby-starter-blog) template. This worked great and enabled me to write articles in markdown which, when built, produced a static site that could be hosted cheaply without having to pay for a full web server.
 
-More recently Next.js has been gaining some real traction and is a technology I would like to learn better. What better way to start with my blog? I tried this migration once before but based on the templates I found at the time the process was more complex than I would have liked and required me to write a lot of custom code. I gave up and put this in the too-hard basket.
+More recently Next.js has been gaining some real traction and is a technology I would like to learn better. What better way to start than with my blog? I tried this migration once before but based on the templates I found at the time the process was more complex than I would have liked and required me to write a lot of custom code. I gave up and put this in the too-hard basket.
 
 However, a colleague recently discovered the [Tailwind Next.js Starter Blog](https://github.com/timlrx/tailwind-nextjs-starter-blog) template, which looked perfect! After an initial evaluation, I decided this template was a good fit and started the migration.
 
@@ -24,12 +24,12 @@ However, a colleague recently discovered the [Tailwind Next.js Starter Blog](htt
 
 The original Gatsby template I used had the following functionality:
 
-- Rendering MD / MDX to HTML
+- Rendering MD/MDX to HTML
 - Code highlighting
 - Blog listing/details page
-- Site / RSS
+- Site/RSS feeds
 - Hot reload
-- PWA manifest
+- PWA support
 - Image optimization
 - Disqus Comments
 
@@ -58,19 +58,19 @@ The features provided by the Gatsby template were a good start and served me wel
 
 ### Migration Process
 
-Before doing anything, I tested a sample MDX (Markdown + React) page, to check images in MDX files get correctly translated into `next/`image` components before the HTML is generated. The test proved successful, and off I went with migrating the blog component.
+Before doing anything, I tested a sample MDX (Markdown + React) page, to check images in MDX files get correctly translated into `next/image` components before the HTML is generated. The test proved successful, and off I went with migrating the blog component.
 
 The process I followed was:
 
-1. Clone template via `npx degit 'timlrx/tailwind-nextjs-starter-blog#contentlayer'`
+1. Clone the template via `npx degit 'timlrx/tailwind-nextjs-starter-blog#contentlayer'`
 1. Personalize [siteMetadata.js](https://github.com/danielmackay/nextjs-personal-blog/blob/main/data/siteMetadata.js) (site-related information)
 1. Modify the content security policy in [next.config.js](https://github.com/danielmackay/nextjs-personal-blog/blob/main/next.config.js) to allow google analytics and Disqus
 1. Personalize [authors/default.md](https://github.com/danielmackay/nextjs-personal-blog/blob/main/data/authors/default.mdx) (main author) and remove secondary author
 1. Remove projects from [headerNavLinks.ts](https://github.com/danielmackay/nextjs-personal-blog/blob/main/data/headerNavLinks.ts)
 
-For each blog post I:
+For each blog post:
 
-1. Copied MDX file into `/data/blog`
+1. Copy the article MDX file from Gatsby into `/data/blog`
 1. Move associated images into `/public/static/images`
 1. Update frontmatter with new tags, and social image (where appropriate)
 1. Add redirects to `next.config.js` where URLs may have changed (e.g. nested routes for multi-part articles)
@@ -79,9 +79,11 @@ For each blog post I:
 
 After getting the blog migrated and working with Disqus, I wanted to migrate the comments to Giscus. Giscus is an open-source library that uses GitHub discussions to store comments. Once a user has logged into GitHub then can comment either via the article or via the GitHub discussion. A new discussion gets automatically created for each post.
 
-Configuration of this was not hard. I followed the instructions on the [Giscus App](https://giscus.app/) and confirmed my settings via an [article from Andrew Lock](https://andrewlock.net/replacing-disqus-with-github-discussions-using-giscus/).
+Configuration of this was not hard. I followed the instructions on the [Giscus App](https://giscus.app/) and confirmed my settings via an article from [Andrew Lock](https://andrewlock.net/replacing-disqus-with-github-discussions-using-giscus/).
 
-Migration on the other hand was tricky. After exporting the comments from Disqus, I found several comment threads were not valid either from old pages or from my local testing. I manually massaged the XML export and then used a node.js [disqus-to-github-discussions](https://github.com/estruyf/disqus-to-github-discussions) importer. I also had to create a [GitHub App](https://docs.github.com/en/developers/apps/building-github-apps/creating-a-github-app) to authenticate with the Graph API and avoid rate limiting.
+Migration on the other hand was tricky. After exporting the comments from Disqus, I found several comment threads were not valid and linked to either old pages or local testing URLs. I manually massaged the XML export and then used a node.js [disqus-to-github-discussions](https://github.com/estruyf/disqus-to-github-discussions) importer. I also had to create a [GitHub App](https://docs.github.com/en/developers/apps/building-github-apps/creating-a-github-app) to authenticate with the Graph API and avoid rate limiting.
+
+The result was great!
 
 ![GitHub Discussions](/static/images/migrating-from-gatsby-to-nextjs/github-discussions.png)
 
@@ -92,7 +94,7 @@ Migration on the other hand was tricky. After exporting the comments from Disqus
 
 ## Hosting
 
-The Gatsby site was hosted on an Azure Static Web App. This worked well and only cost me cents per month! However, in case I wanted to leverage some more advanced features of Next.js like SSR (Server-Side Rendering) and ISR (Incremental Static Regeneration) I decided to host via Vercel. This is free for hobby/personal projects and provides more than enough resource limits. It also provides extra capabilities like analytics and providing feedback on feature branches directly within the website.
+The Gatsby site was hosted on an Azure Static Web App. This worked well and only cost me cents per month! However, in case I wanted to leverage some more advanced features of Next.js like SSR (Server-Side Rendering) or ISR (Incremental Static Regeneration) I decided to host via [Vercel](https://vercel.com/). This is free for hobby/personal projects and provides more than enough resources in the free tier. It also provides extra capabilities like analytics and providing feedback on feature branches directly within the website.
 
 There was no need to set up GitHub actions as Vercel takes care of all the building and deployment and is triggered via Git hooks. A production deployment takes around 1 minute to be live.
 
