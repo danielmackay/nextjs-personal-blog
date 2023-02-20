@@ -13,19 +13,19 @@ canonicalUrl: https://www.dandoescode.com/blog/c4-models-with-structurizr
 
 ## Overview
 
-In my last [blog post](https://www.dandoescode.com/blog/plantuml-vs-mermaid/), we explored different types of diagrams we can use to describe a software system.  We contrasted creating these diagrams in both Mermaid and PlantUML.  One of the diagrams I touched on was from *C4 Models*.  In this blog post we'll dive into C4 models a litter deeper and look at some of the reasons they are so effective.  We'll also take a look at the difference between *modelling* and *diagrams*.
+In my last [blog post](https://www.dandoescode.com/blog/plantuml-vs-mermaid/), we explored different types of diagrams we can use to describe a software system. We contrasted creating these diagrams in both Mermaid and PlantUML. One of the diagrams I touched on was from _C4 Models_. In this blog post we'll dive into C4 models a litter deeper and look at some of the reasons they are so effective. We'll also take a look at the difference between _modelling_ and _diagrams_.
 
 ## C4 Models
 
-The best way to explain the concept is to think about how we use Google Maps.  When we are exploring an area in Google Maps, we will often start zoomed out to help us get context.  Once we find the rough area, we are interested in we can zoom in to get a little more detail.  From there we can find a further area of interest where we can zoom in even more and get even more detail.  C4 models works in the same way.  There are 4 levels of diagrams, with each level providing more detail than the last.
+The best way to explain the concept is to think about how we use Google Maps. When we are exploring an area in Google Maps, we will often start zoomed out to help us get context. Once we find the rough area, we are interested in we can zoom in to get a little more detail. From there we can find a further area of interest where we can zoom in even more and get even more detail. C4 models works in the same way. There are 4 levels of diagrams, with each level providing more detail than the last.
 
 ### Level 1: System Context diagram
 
-This level is the most zoomed out.  The diagram concentrates on actors (customers with specific roles) and systems.  Systems could be the ones we control, or they could be external systems we depend on.  The system this diagram focuses on is the one we are building or are responsible for.  It will container one or more moving parts (i.e., Containers).  This is our big picture view that doesn't provide much detail but helps provide context.
+This level is the most zoomed out. The diagram concentrates on actors (customers with specific roles) and systems. Systems could be the ones we control, or they could be external systems we depend on. The system this diagram focuses on is the one we are building or are responsible for. It will container one or more moving parts (i.e., Containers). This is our big picture view that doesn't provide much detail but helps provide context.
 
 ### Level 2: Container diagram
 
-This is the next level of zoom, which is often the most interesting.  Containers are usually anything that hosts code or stores data.  Examples of container are:
+This is the next level of zoom, which is often the most interesting. Containers are usually anything that hosts code or stores data. Examples of container are:
 
 - Single page applications
 - Web servers
@@ -39,41 +39,41 @@ Container diagrams still show actors and can also reference external systems.
 
 ### Level 3: Component diagram
 
-The next level of zoom is the component diagram.  This shows the major structural building blocks of your application and their interactions.  This is not a 1-1 mapping of your application, but often a *conceptual view* of your application.  The term *component* is loose here.  It could mean a React or Blazor component. But it could also represent a controller, or service containing business logic.
+The next level of zoom is the component diagram. This shows the major structural building blocks of your application and their interactions. This is not a 1-1 mapping of your application, but often a _conceptual view_ of your application. The term _component_ is loose here. It could mean a React or Blazor component. But it could also represent a controller, or service containing business logic.
 
 ### Level 4: Code diagram
 
-The deepest level of zoom is the code diagram.  In contrast with the component diagram above, this *is* a 1-1 mapping with your code.  Although this diagram exists, it is often not used as the code paints a very similar picture.
+The deepest level of zoom is the code diagram. In contrast with the component diagram above, this _is_ a 1-1 mapping with your code. Although this diagram exists, it is often not used as the code paints a very similar picture.
 
 ### Supplementary diagrams
 
 Besides the 4 diagrams above there are a few more worth noting:
 
-- System Landscape diagram: The context diagram provides a view of a single software system.  The System Landscape Diagram shows the collection of all software systems.  We can consider this an *enterprise diagram*.
-- Deployment diagram: When deploying to infrastructure, there are often additional services such networking, CDNs, gateways, load balancers, resource groups.  These are considered separate to containers, but still need to be considered for deployments.  We can consider this similar to a *cloud architecture diagram*.
-- Dynamic diagram: This can be a cutdown version of any of the diagrams above to show a specific feature or use case.  You can think of this as being similar to a *sequence diagram*.
+- System Landscape diagram: The context diagram provides a view of a single software system. The System Landscape Diagram shows the collection of all software systems. We can consider this an _enterprise diagram_.
+- Deployment diagram: When deploying to infrastructure, there are often additional services such networking, CDNs, gateways, load balancers, resource groups. These are considered separate to containers, but still need to be considered for deployments. We can consider this similar to a _cloud architecture diagram_.
+- Dynamic diagram: This can be a cutdown version of any of the diagrams above to show a specific feature or use case. You can think of this as being similar to a _sequence diagram_.
 
 ### Modelling vs Diagramming
 
-Now that we've covered the different types of C4 diagrams, there is one more important concept to cover - *modelling vs diagrams*.
+Now that we've covered the different types of C4 diagrams, there is one more important concept to cover - _modelling vs diagrams_.
 
-*Modelling* is the act of *describing* your system.  We can describe the actors, systems, containers, components and their relationships.  But modelling can be viewed as the data without the presentation.  Modelling does not determine, *how* we will depict this data.
+_Modelling_ is the act of _describing_ your system. We can describe the actors, systems, containers, components and their relationships. But modelling can be viewed as the data without the presentation. Modelling does not determine, _how_ we will depict this data.
 
-*Diagramming* is essentially drawing pictures to visually represent our model.
+_Diagramming_ is essentially drawing pictures to visually represent our model.
 
-This distinction becomes powerful when we can create a single model and reuse different elements of it in different diagrams.  This allows us to apply the DRY principle to our diagrams.
+This distinction becomes powerful when we can create a single model and reuse different elements of it in different diagrams. This allows us to apply the DRY principle to our diagrams.
 
 ## Structurizr
 
-So far, we've covered a lot of theory.  What do these diagrams look like, and what tooling can we use?  My last [blog post](https://www.dandoescode.com/blog/plantuml-vs-mermaid/) showed a very brief look at using PlantUML and Mermaid.  PlantUML did a reasonable job, but Mermaid was unfortunately lack lustre.
+So far, we've covered a lot of theory. What do these diagrams look like, and what tooling can we use? My last [blog post](https://www.dandoescode.com/blog/plantuml-vs-mermaid/) showed a very brief look at using PlantUML and Mermaid. PlantUML did a reasonable job, but Mermaid was unfortunately lack lustre.
 
 Enter - Structurizr! 🙌
 
-Structurizr is an awesome tool that enables us to model a system using a custom DSL.  We can then use that model to create multiple diagrams.
+Structurizr is an awesome tool that enables us to model a system using a custom DSL. We can then use that model to create multiple diagrams.
 
 ### Setup
 
-There are a few different [versions of Structurizr](https://structurizr.com/products).  For our purposes Structurizr Lite works fantastic.  This can be installed locally via docker (recommended) or spring boot.
+There are a few different [versions of Structurizr](https://structurizr.com/products). For our purposes Structurizr Lite works fantastic. This can be installed locally via docker (recommended) or spring boot.
 
 To install via docker we first need to pull the image from docker hub:
 
@@ -81,13 +81,13 @@ To install via docker we first need to pull the image from docker hub:
 docker pull structurizr/lite
 ```
 
-Next we need to run the container exposing a port on the host, and a path to our working directory.  For example:
+Next we need to run the container exposing a port on the host, and a path to our working directory. For example:
 
 ```powershell
 docker run -it --rm -p 8080:8080 -v C:Code/FolderName/usr/local/structurizr structurizr/lite
 ```
 
-One caveat to be aware of is that one docker image can only point to one working directory.  So, if you have several workspaces in different directories, you'll need to have one container running for each of them.  We can get around this by writing a helper script for the container creation and manage them via docker desktop.
+One caveat to be aware of is that one docker image can only point to one working directory. So, if you have several workspaces in different directories, you'll need to have one container running for each of them. We can get around this by writing a helper script for the container creation and manage them via docker desktop.
 
 The following script starts a container and requires a hostPort, hostFolder, and containerName
 
@@ -106,7 +106,7 @@ param(
 docker run -d --name "structurizr-$containerName" -p $hostPort":8080" -v $hostFolder":/usr/local/structurizr" structurizr/lite
 ```
 
-This allows us to easily spin up Structurizr contains.  Once the container has been created, we can view, inspect and manage them via docker desktop:
+This allows us to easily spin up Structurizr contains. Once the container has been created, we can view, inspect and manage them via docker desktop:
 
 ![Docker Desktop](/static/images/c4-models-with-structurizr/docker-desktop.png)
 
@@ -116,7 +116,7 @@ So now that we have our container running, we can start working on our model and
 
 #### Model
 
-Let's use an example of an ecommerce system.  In such a system we would have model that looks like:
+Let's use an example of an ecommerce system. In such a system we would have model that looks like:
 
 ```dsl
     model {
@@ -152,12 +152,12 @@ Let's use an example of an ecommerce system.  In such a system we would have mod
 
         emailSystem = softwareSystem "Email System" "Sendgrid" "External"
 
-        # relationships between people and software systems 
+        # relationships between people and software systems
         customerPerson -> storeContainer "Placers Orders" "https"
         warehousePerson -> stockContainer "Dispatches Orders" "https"
         apiContainer -> emailSystem "Trigger emails" "https"
         emailSystem -> customerPerson "Delivers emails" "https"
-        
+
         # relationships to/from containers
         stockContainer -> apiContainer "uses" "https"
         storeContainer -> apiContainer "uses" "https"
@@ -180,7 +180,7 @@ Let's use an example of an ecommerce system.  In such a system we would have mod
 
 For the full DSL see [here](https://github.com/danielmackay/structurizr-blog-example/blob/main/workspace.dsl).
 
-There is a bit going on here, but the syntax of the DSL is fairly straightforward and maps well to the concepts explained above.  Let's look closer at the syntax of a container.
+There is a bit going on here, but the syntax of the DSL is fairly straightforward and maps well to the concepts explained above. Let's look closer at the syntax of a container.
 
 Containers are defined with the format:
 
@@ -192,7 +192,7 @@ Containers are defined with the format:
 - `name`: the name of our container
 - `description`: a description of what our container is responsible for
 - `technology`: the major technology of the container (e.g. ASP.NET Core, SQL Server, Service Bus, etc)
-- `tags`: tags are optional but can be used to alter the appearance of the container.  Some themes rely on these.
+- `tags`: tags are optional but can be used to alter the appearance of the container. Some themes rely on these.
 
 Relationships are defined with the format:
 
@@ -206,7 +206,7 @@ Relationships are defined with the format:
 
 #### Context
 
-Now that we have our model, diagrams become trivial.  A context diagram can be rendered with:
+Now that we have our model, diagrams become trivial. A context diagram can be rendered with:
 
 ```powershell
 systemContext ecommerceSystem "Context" {
@@ -250,15 +250,15 @@ Which generates this diagram:
 
 ### Additional Structurizr Features
 
-Besides generating diagrams from models, Structurizr can also be used to document architectures.  It does this by providing an area for documentation, and another one for ADR's (Architectural Decision Records).
+Besides generating diagrams from models, Structurizr can also be used to document architectures. It does this by providing an area for documentation, and another one for ADR's (Architectural Decision Records).
 
 ## Summary
 
-In this post we've seen an introduction to C4 models and different notations it provides.  We've seen how we can start zoomed out for the big picture, then zoom in to systems of interest to get further detail.  This helps us to make sense of both new and existing systems.  We've looked at the differences between modelling and diagramming and seen the main advantage of this is that it enables us to keep our diagrams DRY.
+In this post we've seen an introduction to C4 models and different notations it provides. We've seen how we can start zoomed out for the big picture, then zoom in to systems of interest to get further detail. This helps us to make sense of both new and existing systems. We've looked at the differences between modelling and diagramming and seen the main advantage of this is that it enables us to keep our diagrams DRY.
 
 We also looked at how Structurizr provides a DSL we can use to generate models, diagrams, documentation, and ADRs.
 
-We've also seen that compared to [Mermaid and PlantUML]((https://www.dandoescode.com/blog/plantuml-vs-mermaid/)), Structurizr is the premium option for generate C4 diagrams IMHO.  
+We've also seen that compared to [Mermaid and PlantUML](https://www.dandoescode.com/blog/plantuml-vs-mermaid/), Structurizr is the premium option for generate C4 diagrams IMHO.
 
 Get out there and get Stucturizing with C4 models! 😎
 
