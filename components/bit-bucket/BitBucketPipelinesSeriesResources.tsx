@@ -4,30 +4,32 @@ const BitBucketPipelinesSeriesResources = () => {
       <h2>Series</h2>
       <ul>
         <li>
-          <a href="https://github.com/danielmackay/aspnet-core-bitbucket-pipelines">
+          <a href="https://github.com/danielmackay/aspnet-core-bitbucket-pipelines/">
             Sample Code Parts 1-2
           </a>
         </li>
         <li>
-          <a href="https://github.com/danielmackay/react-bitbucket-pipelines">Sample Code Part 3</a>
+          <a href="https://github.com/danielmackay/react-bitbucket-pipelines/">
+            Sample Code Part 3
+          </a>
         </li>
         <li>
-          <a href="https://support.atlassian.com/bitbucket-cloud/docs/get-started-with-bitbucket-pipelines">
+          <a href="https://support.atlassian.com/bitbucket-cloud/docs/get-started-with-bitbucket-pipelines/">
             Get started with Bitbucket Pipelines
           </a>
         </li>
         <li>
-          <a href="https://support.atlassian.com/bitbucket-cloud/docs/configure-bitbucket-pipelinesyml">
+          <a href="https://support.atlassian.com/bitbucket-cloud/docs/configure-bitbucket-pipelinesyml/">
             Configure bitbucket-pipelines.yml
           </a>
         </li>
         <li>
-          <a href="https://support.atlassian.com/bitbucket-cloud/docs/use-pipelines-in-different-software-languages">
+          <a href="https://support.atlassian.com/bitbucket-cloud/docs/use-pipelines-in-different-software-languages/">
             Use Pipelines in different software languages
           </a>
         </li>
         <li>
-          <a href="https://bitbucket-pipelines.prod.public.atl-paas.net/validator">
+          <a href="https://bitbucket-pipelines.prod.public.atl-paas.net/validator/">
             Pipelines Validator
           </a>
         </li>
