@@ -10,21 +10,25 @@ canonicalUrl: https://www.dandoescode.com/blog/bicep/part-two
 ---
 
 <div class="flex flex-col justify-center items-center">
-    <Image src="/static/images/bicep/bicep6.png" width="400px" height="200px"/>
+  <Image src="/static/images/bicep/bicep6.png" width="400px" height="200px" />
 </div>
 
 <BicepSeriesHeader />
 
 ## Overview
-Hello again friends!  In my [previous Bicep article](/blog/bicep-part-one) I introduced Bicep templates, showed up to get setup, create simple templates and deploy them to Azure.  Today we are going to dive a little deeper to the other features that Bicep templates offer.
+
+Hello again friends! In my [previous Bicep article](/blog/bicep/part-one) I introduced Bicep templates, showed up to get setup, create simple templates and deploy them to Azure. Today we are going to dive a little deeper to the other features that Bicep templates offer.
 
 ## Bicep Template Structure
-In [Part 1](blog/bicep-part-one), we created a storage account in Bicep.  However, this was very static and not reusable.  Let's see how we can change that.
+
+In [Part 1](/blog/bicep/part-one), we created a storage account in Bicep. However, this was very static and not reusable. Let's see how we can change that.
 
 ### Parameters
-Most bicep templates will want at least some values to be passed dynamically to the deployment.  For example, you might want to change the name of your resource or which region it gets deployed to.  This can be done with *parameters*.
+
+Most bicep templates will want at least some values to be passed dynamically to the deployment. For example, you might want to change the name of your resource or which region it gets deployed to. This can be done with _parameters_.
 
 The syntax is:
+
 ```
 param [ParamName] [DataType] = '[DefaultValue]''
 ```
@@ -33,7 +37,8 @@ For example:
 ![Parameters](/static/images/bicep/parameters.png)
 
 ### Decorators
-We can further extend our use of parameters, by adding metadata.  This is done through *decorators*.  This allows us to do the following:
+
+We can further extend our use of parameters, by adding metadata. This is done through _decorators_. This allows us to do the following:
 
 - Mark fields as secure so that the text entered is not visible
 - Provide help description (this will be shown during deployment)
@@ -48,12 +53,14 @@ For example:
 For more info see the [Microsoft Docs](https://docs.microsoft.com/en-us/azure/azure-resource-manager/bicep/parameters#decorators).
 
 ### Variables
-We can also add *variables* to store complex expressions or values that we don't want to repeat throughout the template.  This is somewhat like parameters, but are not visible outside the template and can't be used with decorators:
+
+We can also add _variables_ to store complex expressions or values that we don't want to repeat throughout the template. This is somewhat like parameters, but are not visible outside the template and can't be used with decorators:
 
 ![Variables](/static/images/bicep/variables.png)
 
 ### Output
-*Outputs* can be used to returned information after the deployment or to pass information into another bicep template.  One use case for this may be to return the connection string for an account that was just created:
+
+_Outputs_ can be used to returned information after the deployment or to pass information into another bicep template. One use case for this may be to return the connection string for an account that was just created:
 
 ![Output](/static/images/bicep/output.png)
 
@@ -70,17 +77,19 @@ az deployment group show \
 
 ### String Interpolation
 
-We can use string interpolation just like we can in most modern programming languages.  I've sneakily already included an example of this above:
+We can use string interpolation just like we can in most modern programming languages. I've sneakily already included an example of this above:
 
 ![Variables](/static/images/bicep/variables.png)
 
 ### Ternary Operator
+
 The ternary operator (if this, then that...), can be used to conditionally provide a value.
 
 ![Ternary](/static/images/bicep/ternary.png)
 
 ### Helper Functions
-There are many helper functions built into Bicep templates.  For example:
+
+There are many helper functions built into Bicep templates. For example:
 
 - `resourceGroup()` - get the resource group in the current deployment
 - `uniqueString()` - create a unique name within a resource group
@@ -88,71 +97,80 @@ There are many helper functions built into Bicep templates.  For example:
 - `first()` - first element in an array
 - `listKeys()` or `listSecrets()` - get secrets / keys / connection details for a resource (note: this can differ slightly between resources)
 
-Plus many more!  For the complete list [see here ](https://docs.microsoft.com/en-us/azure/azure-resource-manager/bicep/bicep-functions).
+Plus many more! For the complete list [see here ](https://docs.microsoft.com/en-us/azure/azure-resource-manager/bicep/bicep-functions).
 
 ## Advanced Resource Creation
-We now have a good understanding of the structure of a Bicep template, inputs/outputs, and different expressions we can use.  Next let's look at how we can create multiple resources, conditionally create resources, and deal with pre-existing resources.
+
+We now have a good understanding of the structure of a Bicep template, inputs/outputs, and different expressions we can use. Next let's look at how we can create multiple resources, conditionally create resources, and deal with pre-existing resources.
 
 ### Conditions
-Sometimes we might have a need to optionally deploy a resource based on a condition.  The syntax for this is:
+
+Sometimes we might have a need to optionally deploy a resource based on a condition. The syntax for this is:
 
 ```
 resource [ResourceName] '[ResourceType]' = if ([BooleanExpression]) {...}
 ```
 
-*HOT TIP: VS Code has a snippet for this syntax* 🔥
+_HOT TIP: VS Code has a snippet for this syntax_ 🔥
 
 For example, maybe we only want to deploy a storage account for our first release.
 
 ![Condition](/static/images/bicep/condition.png)
 
 ### Loops
-Sometimes we may need to create multiple resources of the same type and often only the name will change.  This could result in a lot of boilerplate code if we do this manually.  Thankfully, we can keep it DRY by using loops.  The syntax for this is:
+
+Sometimes we may need to create multiple resources of the same type and often only the name will change. This could result in a lot of boilerplate code if we do this manually. Thankfully, we can keep it DRY by using loops. The syntax for this is:
 
 ```
 resource [ResourceName] '[ResourceType]' = [for [IteratorName] in [Array] = {...}]
 ```
 
-*HOT TIP: VS Code has a snippet for this syntax* 🔥
+_HOT TIP: VS Code has a snippet for this syntax_ 🔥
 
 For example, we may want to create many queues on a service bus, or we may want to create many containers in a storage account:
 
 ![Loop](/static/images/bicep/loop.png)
 
 ### Existing Resources
-If we are deploying into an existing environment, we might want to add new resources, but not modify the existing resources that have already been deployed and tested.  We can do this with the `existing` syntax.
+
+If we are deploying into an existing environment, we might want to add new resources, but not modify the existing resources that have already been deployed and tested. We can do this with the `existing` syntax.
 
 For example, if we reuse our example above but the storage account already existed and we only wanted to add the containers, we could do something like:
 
 ![Existing](/static/images/bicep/existing.png)
 
 ## Decompiling ARM Templates
-Perhaps you've already invested heavily into ARM but would like to refresh your DevOps approach.  You can leverage your existing work by converting ARM templates into Bicep templates.  This can also be useful if you have an existing environment that you need to replicate.  You can export the ARM template for all resources, then do the conversion.  There are two ways we can achieve this.
 
-### Command Line                     
+Perhaps you've already invested heavily into ARM but would like to refresh your DevOps approach. You can leverage your existing work by converting ARM templates into Bicep templates. This can also be useful if you have an existing environment that you need to replicate. You can export the ARM template for all resources, then do the conversion. There are two ways we can achieve this.
+
+### Command Line
 
 ```
 bicep decompile ".\[template].json"
 ```
 
 ### Bicep Playground
-We can also use the [Bicep Playground](https://bicepdemo.z22.web.core.windows.net/).  This allows us to upload an ARM template and will do the conversion for us.
 
-*NOTE: Decompiling ARM templates is not guaranteed to provide a perfect conversion.  However, it does get us 99% of the way there and VS Code can help to pick up and errors that may occur.*
+We can also use the [Bicep Playground](https://bicepdemo.z22.web.core.windows.net/). This allows us to upload an ARM template and will do the conversion for us.
+
+_NOTE: Decompiling ARM templates is not guaranteed to provide a perfect conversion. However, it does get us 99% of the way there and VS Code can help to pick up and errors that may occur._
 
 ## Modules
-When deploying a large system with many resources, a single Bicep template could get unwieldly.  To break our templates up we can use *modules*.  Luckily any Bicep template can be consumed as a module, so we just have to write the code that calls into each module:
+
+When deploying a large system with many resources, a single Bicep template could get unwieldly. To break our templates up we can use _modules_. Luckily any Bicep template can be consumed as a module, so we just have to write the code that calls into each module:
 
 For example, if we were creating a developer environment where we needed to spin up a service bus and storage account, we could do this as follows (assuming the underlying bicep templates already exist):
 
 ![Module](/static/images/bicep/module.png)
 
-We would then deploy the top-level Bicep template that calls the modules like we would any other template.  We are free to use loops and conditions in module declarations.
+We would then deploy the top-level Bicep template that calls the modules like we would any other template. We are free to use loops and conditions in module declarations.
 
 ## Best Practices
+
 There are several best practices we can follow to make our templates easier to understand and use.
 
 ### Parameters
+
 1. Use good naming for parameters
 2. Use parameters for things that change between deployments
 3. Use variables for hardcoded things that don't change between deployments
@@ -161,26 +179,31 @@ There are several best practices we can follow to make our templates easier to u
 6. Define parameters at the top of your templates
 
 ### Variables
-1. No need to specify types.  They will be inferred
+
+1. No need to specify types. They will be inferred
 2. Use camel case for names
 
 ### Naming
-1. If using `uniqueString()` ensure you pass in the resource group ID so that the name is always the same within a resource group.  (e.g. `uniqueString(resourceGroup().id)`)
+
+1. If using `uniqueString()` ensure you pass in the resource group ID so that the name is always the same within a resource group. (e.g. `uniqueString(resourceGroup().id)`)
 
 ### Resource Definitions
+
 1. Use variables to store logic instead of resources
 2. Output resource properties instead of manually construction strings (e.g. connection strings or URLs)
 3. Use recent API versions
 
 ### Outputs
+
 1. Don't output sensitive data
 2. Try to pull sensitive data from `existing` resources if possible
 
 ## Summary
-Phew!  That might be a lot to take in, but there is no need to use every one of these features in every template.  The main thing is to be aware they exist and use the ones that make sense in your scenario.
 
-Today we've gone through Bicep template structure and seen how to use parameters, variables, and outputs.  We've seen how to use expressions like string interpolation, ternary operators, and built in functions to get even more expressiveness with our templates.  We've also seen how to use logic to conditionally deploy resources, or loops to deploy many resources.  We've seen how to re-use any existing ARM templates you may have lying around.  And lastly, we touched on modules and went over some Bicep best practices.
+Phew! That might be a lot to take in, but there is no need to use every one of these features in every template. The main thing is to be aware they exist and use the ones that make sense in your scenario.
 
-We now have all the tools needed to create great templates.  Go forth and flex your Biceps! 💪
+Today we've gone through Bicep template structure and seen how to use parameters, variables, and outputs. We've seen how to use expressions like string interpolation, ternary operators, and built in functions to get even more expressiveness with our templates. We've also seen how to use logic to conditionally deploy resources, or loops to deploy many resources. We've seen how to re-use any existing ARM templates you may have lying around. And lastly, we touched on modules and went over some Bicep best practices.
+
+We now have all the tools needed to create great templates. Go forth and flex your Biceps! 💪
 
 <BicepSeriesResources />

@@ -4,12 +4,12 @@ const BitBucketPipelinesSeriesResources = () => {
       <h2>Series</h2>
       <ul>
         <li>
-          <a href="https://bitbucket.org/danielmackaylevo/aspnet-core-pipelines/src/master/">
+          <a href="https://github.com/danielmackay/aspnet-core-bitbucket-pipelines/">
             Sample Code Parts 1-2
           </a>
         </li>
         <li>
-          <a href="https://bitbucket.org/danielmackaylevo/react-pipelines/src/master/">
+          <a href="https://github.com/danielmackay/react-bitbucket-pipelines/">
             Sample Code Part 3
           </a>
         </li>
@@ -29,7 +29,7 @@ const BitBucketPipelinesSeriesResources = () => {
           </a>
         </li>
         <li>
-          <a href="https://bitbucket-pipelines.prod.public.atl-paas.net/validator">
+          <a href="https://bitbucket-pipelines.prod.public.atl-paas.net/validator/">
             Pipelines Validator
           </a>
         </li>

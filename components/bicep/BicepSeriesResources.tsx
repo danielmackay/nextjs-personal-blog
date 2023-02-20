@@ -4,8 +4,8 @@ const BicepSeriesResources = () => {
       <h2>Resources</h2>
       <ul>
         <li>
-          <a href="https://github.com/Azure/bicep/blob/main/docs/tutorial/01-simple-template.md">
-            Tutorial
+          <a href="https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/learn-bicep">
+            MS Learn
           </a>
         </li>
         <li>
@@ -28,9 +28,7 @@ const BicepSeriesResources = () => {
           </a>
         </li>
         <li>
-          <a href="https://github.com/brydeno/BicepsOfSteel](https://github.com/brydeno/BicepsOfSteel">
-            BicepsOfSteel
-          </a>
+          <a href="https://github.com/brydeno/BicepsOfSteel">BicepsOfSteel</a>
         </li>
       </ul>
     </>
