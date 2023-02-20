@@ -6,7 +6,7 @@ const siteMetadata = {
   language: 'en-us',
   theme: 'system', // system, dark or light
   siteUrl: 'https://www.dandoescode.com',
-  siteRepo: 'https://github.com/danielmackay/nextjs-blog-v2',
+  siteRepo: 'https://github.com/danielmackay/nextjs-personal-blog',
   siteLogo: '/static/images/logo.png',
   image: '/static/images/avatar.png',
   socialBanner: '/static/images/twitter-card.png',
