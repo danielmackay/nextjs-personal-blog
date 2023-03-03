@@ -1,0 +1,233 @@
+---
+title: 'Bit Bucket Pipelines - Part 4: Deploying a Function App to Azure with Bicep'
+date: '2023-03-03'
+lastmod: '2023-03-03'
+tags: ['bit-bucket', 'pipelines', 'devops', 'dotnet', 'function-apps', 'azure', 'azure-cli']
+draft: false
+summary: Deploying a Function App to Azure using Bit Bucket Pipelines, the Azure CLI and Bicep templates.  This article looks into the problems I faced and the solutions I found to overcome them.
+images: ['/static/images/bit-bucket-pipelines/banner-part-four.png']
+canonicalUrl: https://www.dandoescode.com/blog/bit-bucket-pipelines/part-four-deploying-a-function-app-to-azure-with-bicep
+---
+
+![Banner](/static/images/bit-bucket-pipelines/banner-part-four.png)
+
+<BitBucketPipelinesSeriesHeader />
+
+## Intro
+
+I started this Bit Bucket Series over 2 years ago and recently got the chance to build upon the knowledge I had by introducing Bicep and the Azure CLI into Bit Bucket Pipelines. This process was not nearly as smooth as I would have liked. All the moving parts worked fine locally, but once running within Bit Bucket Pipelines I ran into a slew of errors.
+
+Let's dive into the problems I faced and the solutions I found to overcome them.
+
+## Problems
+
+### Microsoft Pipes Are Not supported
+
+In the past, I have used [Microsoft provided pipes](https://bitbucket.org/microsoft/azure-functions-deploy/src/master/) to deploy Azure Functions. However, these have not been touched for years and are no longer supported.
+
+### Atlassian Pipes Are Buggy
+
+I discovered that Atlassian has [taken over support](https://bitbucket.org/atlassian/azure-functions-deploy/src/master/) of the older Microsoft Pipes. At first, I thought this would solve some of the bugs I encountered, but alas it did not.
+
+One of the key problems when running the [azure-cli-run](https://bitbucket.org/atlassian/azure-cli-run/src/master/) pipe is that it uses a public GitHub API under the hood to check for the latest version of Bicep. It turns out this API is rate limited and only allows 60 calls per hour from a single IP address. You can imagine how well this works on shared infrastructure (i.e. Bit Bucket Pipelines). A lot of people are [unhappy about this](https://github.com/Azure/bicep/issues/3689). 🤦
+
+### Overhead With Using Pipes
+
+Even if you get lucky to make it past the GitHub API throttling issue above, there is still an overhead with using a pipe like [azure-cli-run](https://bitbucket.org/atlassian/azure-cli-run/src/master/) pipe. Each AZ CLI command you need to run must provision the pipe, authenticate, and can only run a single command. All that takes about 30 seconds, which is not great if you need to run several AZ CLI commands.
+
+## Solutions
+
+### Manually Install the Azure CLI
+
+Instead of using the Azure pipes, I decided to run the Azure CLI directly. The first option I tried was to use the [microsoft-azure-cli](https://hub.docker.com/_/microsoft-azure-cli) docker image to run the commands. Unfortunately, that suffered from the same GitHub API problem above.
+
+The most reliable way I found was to install the Azure CLI directly via:
+
+```ps1
+curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+```
+
+### Run multiple Commands in a Single Step
+
+Installing the Azure CLI manually does come with an overhead, but if we need to run multiple commands in a single step the extra time spent with the install pays off as each command after that runs quickly. Doing this gave me a net reduction in the overall time needed to run the pipeline.
+
+We could improve this even more by creating a custom docker image that contained the latest .NET SDK, PowerShell, Azure CLI and Bicep. Such an image would contain all tools we would possibly need to build and deploy .NET applications without having to spend time manually installing tools during each pipeline run.
+
+## Pipeline Configuration
+
+With all of the above in mind, the final pipeline looked as follows:
+
+```yaml
+image: mcr.microsoft.com/dotnet/sdk:7.0
+
+definitions:
+  steps:
+    - step: &build
+        name: Build
+        caches:
+          - dotnetcore
+        script:
+          - dotnet restore
+          - dotnet build --no-restore --configuration Release -warnaserror
+    - step: &package
+        name: Package
+        caches:
+          - dotnetcore
+        script:
+          - apt-get update
+          - apt-get install zip -y
+          - dotnet build --configuration Release -warnaserror
+          - dotnet publish ./src/My.Project/My.Project.csproj -c Release -o ./publish
+          - cd ./publish
+          - zip -r func.zip .
+        artifacts:
+          - publish/func.zip
+    - step: &deploy
+        name: Deploy
+        script:
+          - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+          - az login --service-principal -u $AZURE_APP_ID -p $AZURE_PASSWORD --tenant $AZURE_TENANT_ID
+          - az group create --name $RG_NAME --location $LOCATION
+          - az deployment group create --resource-group $RG_NAME --template-file ./deploy/main.bicep --parameters location=australiaeast environment="$AZURE_ENV"
+          - az functionapp deployment source config-zip -g $RG_NAME -n $FUNCTION_NAME --src "publish/func.zip"
+
+pipelines:
+  pull-requests:
+    '**':
+      - step: *build
+
+  branches:
+    main:
+      - step: *package
+      - stage:
+          name: Deploy to DEV
+          deployment: DEV
+          steps:
+            - step: *deploy
+      - stage:
+          name: Deploy to QA
+          deployment: QA
+          trigger: manual
+          steps:
+            - step: *deploy
+      - stage:
+          name: Deploy to PROD
+          deployment: PROD
+          trigger: manual
+          steps:
+            - step: *deploy
+```
+
+## Bicep Configuration
+
+The bicep file was as follows:
+
+```Bicep
+param location string
+param environment string
+
+var applicationName = 'my-app'
+var suffix = '${applicationName}-${environment}'
+var storageAccountName = 'stmyapp${environment}'
+var functionAppName = 'func-${suffix}'
+var hostingPlanName = 'plan-${suffix}'
+var appInsightsName = 'appi-${suffix}'
+
+resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
+  name: functionAppName
+  kind: 'functionapp,linux'
+  location: location
+  properties: {
+    siteConfig: {
+      netFrameworkVersion: '7.0'
+      appSettings: [
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'dotnet-isolated'
+        }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: appInsights.properties.InstrumentationKey
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appInsights.properties.ConnectionString
+        }
+        {
+          name: 'AzureWebJobsStorage'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccount.id, '2019-06-01').keys[0].value};EndpointSuffix=core.windows.net'
+        }
+        {
+          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccount.id, '2019-06-01').keys[0].value};EndpointSuffix=core.windows.net'
+        }
+        {
+          name: 'WEBSITE_CONTENTSHARE'
+          value: '${toLower(functionAppName)}b614'
+        }
+        {
+          name: 'AZURE_FUNCTIONS_ENVIRONMENT'
+          value: dotNetEnvironment
+        }
+      ]
+    }
+    clientAffinityEnabled: false
+    httpsOnly: true
+    publicNetworkAccess: 'Enabled'
+  }
+  dependsOn: [
+    hostingPlan
+  ]
+}
+
+resource hostingPlan 'Microsoft.Web/serverfarms@2022-03-01' = {
+  name: hostingPlanName
+  location: location
+  kind: 'linux'
+  tags: {
+  }
+  sku: {
+    tier: 'Dynamic'
+    name: 'Y1'
+  }
+}
+
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: appInsightsName
+  location: location
+  tags: {
+  }
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+  }
+  dependsOn: []
+}
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+  name: storageAccountName
+  location: location
+  kind: 'StorageV2'
+  sku: {
+    name: 'Standard_LRS'
+  }
+  properties: {
+    supportsHttpsTrafficOnly: true
+    minimumTlsVersion: 'TLS1_2'
+  }
+}
+```
+
+## Summary
+
+In summary, I faced multiple problems while introducing Bicep and Azure CLI into Bit Bucket Pipelines, including the unsupported nature of the Microsoft provided pipes and the bugs with Atlassian pipes. Additionally, using pipes caused overhead and further rate-limiting problems with a GitHub API. I ultimately decided to manually install the Azure CLI, which involved a little overhead but allowed running multiple commands in a single step, making the pipeline run faster. In the future, we may be able to create a custom docker image to speed up pipelines even further.
+
+The final pipeline and bicep configuration showed an end-to-end example of building, packaging, and deploying a function app to DEV, QA, and PROD environments.
+
+I hope this will help you to get up and running faster with deployment-related Bit Bucket Pipelines, and that you don't have to spend days figuring out the above as I did. 😅
+
+<BitBucketPipelinesSeriesResources />
