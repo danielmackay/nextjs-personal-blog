@@ -35,9 +35,9 @@ One of the key problems when running the [azure-cli-run](https://bitbucket.org/a
 
 Even if you get lucky to make it past the GitHub API throttling issue above, there is still an overhead with using a pipe like [azure-cli-run](https://bitbucket.org/atlassian/azure-cli-run/src/master/) pipe. Each AZ CLI command you need to run must provision the pipe, authenticate, and can only run a single command. All that takes about 30 seconds, which is not great if you need to run several AZ CLI commands.
 
-## Solution
+## Solutions
 
-## Manually Install the Azure CLI
+### Manually Install the Azure CLI
 
 Instead of using the Azure pipes, I decided to run the Azure CLI directly. The first option I tried was to use the [microsoft-azure-cli](https://hub.docker.com/_/microsoft-azure-cli) docker image to run the commands. Unfortunately, that suffered from the same GitHub API problem above.
 
@@ -47,7 +47,7 @@ The most reliable way I found was to install the Azure CLI directly via:
 curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 ```
 
-## Run multiple Commands in a Single Step
+### Run multiple Commands in a Single Step
 
 Installing the Azure CLI manually does come with an overhead, but if we need to run multiple commands in a single step the extra time spent with the install pays off as each command after that runs quickly. Doing this gave me a net reduction in the overall time needed to run the pipeline.
 
