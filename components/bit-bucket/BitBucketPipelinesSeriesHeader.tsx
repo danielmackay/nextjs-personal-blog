@@ -20,6 +20,11 @@ const BitBucketPipelinesSeriesHeader = () => {
             Part 3: Deploying a React App to Azure Blob Storage
           </Link>
         </li>
+        <li>
+          <Link href="/blog/bit-bucket-pipelines/part-four-deploying-a-function-app-to-azure-with-bicep">
+            Part 4: Deploying a Function App to Azure with Bicep
+          </Link>
+        </li>
       </ul>
     </>
   )

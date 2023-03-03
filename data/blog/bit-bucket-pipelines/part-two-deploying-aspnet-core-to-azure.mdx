@@ -5,46 +5,50 @@ lastmod: '2022-12-30'
 tags: ['bit-bucket', 'pipelines', 'devops', 'dotnet', 'aspnetcore', 'azure']
 draft: false
 summary: 'Packaging and deploying an ASP.NET Core website to an Azure Web App using Bit Bucket Pipelines.'
-images: []
+images: ['/static/images/bit-bucket-pipelines/banner-part-two.png']
 canonicalUrl: https://www.dandoescode.com/blog/bit-bucket-pipelines/part-two-deploying-aspnet-core-to-azure
 ---
+
+![Banner](/static/images/bit-bucket-pipelines/banner-part-two.png)
 
 <BitBucketPipelinesSeriesHeader />
 
 ## Intro
+
 In Part 1 of this series we walked through the basics of Bit Bucket Pipelines and how to build and test a .NET Core app.
 
 In Part 2 of this series we will walk through how to publish the .NET Core application and deploy it to a Web App in Azure.
 
 ## Packaging
-When we finished Part 1, we ended up with a simple ASP.NET Core Razor website.  We will continue on from that and use the same code to publish to an Azure Web App.  The first step is to package our web app so that we can publish it.
+
+When we finished Part 1, we ended up with a simple ASP.NET Core Razor website. We will continue on from that and use the same code to publish to an Azure Web App. The first step is to package our web app so that we can publish it.
 
 ```yaml
-  branches:
-        master:
-        - step:
-            name: 'Package'
-            caches:
-                - dotnetcore
-            script:
-                # NOTE: zip isn't installed in the image, so we must manually add it
-                - apt-get update
-                - apt-get install zip -y
-                # Build all
-                - dotnet build
-                # publish & zip
-                - dotnet publish ./web/web.csproj -c Release -o ./publish
-                - cd ./publish
-                - zip -r web.zip .
-            artifacts:
-                - 'publish/web/web.zip'
+branches:
+  master:
+    - step:
+        name: 'Package'
+        caches:
+          - dotnetcore
+        script:
+          # NOTE: zip isn't installed in the image, so we must manually add it
+          - apt-get update
+          - apt-get install zip -y
+          # Build all
+          - dotnet build
+          # publish & zip
+          - dotnet publish ./web/web.csproj -c Release -o ./publish
+          - cd ./publish
+          - zip -r web.zip .
+        artifacts:
+          - 'publish/web/web.zip'
 ```
 
-The above YAML produces our packaged web app as a zip file.  The best practice is to deploy from `master`, so our Package step only runs when the `master` branch is changed.  Let's go over the rest of our config and before we come back to the apt-get commands.  First we build the entire solution, and by doing so we will be doing a restore of all required nuget packages.  We then use the standard `dotnet publish` command to publish to a local directory.  As we will be using zip deploy, we need to zip up the contents of our publish directory.  
+The above YAML produces our packaged web app as a zip file. The best practice is to deploy from `master`, so our Package step only runs when the `master` branch is changed. Let's go over the rest of our config and before we come back to the apt-get commands. First we build the entire solution, and by doing so we will be doing a restore of all required nuget packages. We then use the standard `dotnet publish` command to publish to a local directory. As we will be using zip deploy, we need to zip up the contents of our publish directory.
 
-Now unfortunately the .NET Core image we are using to build does not include any zip utilities.  Remember, our pipeline is running on a Linux docker image.  This allows us to run any Linux CLI command during the build. With this in mind we can run an `apt-get update` and `apt-get install zip -y`.  This will install zip into our image.  The alternative would be build our own docker image based off .NET Core SDK 3.1 and add the zip library directly into the image.  However, this would mean having to maintain that docker image and considering these commands only take a few seconds to run, it's a trade-off I'm happy to make. 😀
+Now unfortunately the .NET Core image we are using to build does not include any zip utilities. Remember, our pipeline is running on a Linux docker image. This allows us to run any Linux CLI command during the build. With this in mind we can run an `apt-get update` and `apt-get install zip -y`. This will install zip into our image. The alternative would be build our own docker image based off .NET Core SDK 3.1 and add the zip library directly into the image. However, this would mean having to maintain that docker image and considering these commands only take a few seconds to run, it's a trade-off I'm happy to make. 😀
 
-Once we've zipped up the published contents we then tell pipelines about our `artifacts`.  This is important as only artifacts can be references in the deployment step.
+Once we've zipped up the published contents we then tell pipelines about our `artifacts`. This is important as only artifacts can be references in the deployment step.
 
 After pushing these changes to bit bucket we can see our package step successfully run:
 
@@ -54,26 +58,33 @@ And we can see our artifacts produced, which we are able to download to inspect 
 
 ![Artifacts](/static/images/bit-bucket-pipelines/artifacts.png)
 
-
 ## Deployment
+
 For the deployment step there are a couple things we first need to setup
+
 - Azure Web App
 - Service Principle
 
 ### Azure Web App
+
 For brevity, I'll assume you already know how to create a web app within Azure.
 
 ### Service Principle
-The slightly tricky part is creating the service principle.  The best way to do this is use the Azure CLI.  You can install this almost anywhere, or alternatively use the Azure Cloud Shell.  My preference is to [install it on windows](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli), then run in Powershell.
 
-Once the Azure CLI has been installed you can login to azure via the following command which will take you through a login process in the browser.  You need to ensure you login with the same account that has access to your Azure resources:
+The slightly tricky part is creating the service principle. The best way to do this is use the Azure CLI. You can install this almost anywhere, or alternatively use the Azure Cloud Shell. My preference is to [install it on windows](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli), then run in Powershell.
+
+Once the Azure CLI has been installed you can login to azure via the following command which will take you through a login process in the browser. You need to ensure you login with the same account that has access to your Azure resources:
+
 ```
 az login
 ```
-This will show you a list of the subscriptions you have access to.  Scan the list to find the one you want to deploy into and select it by using the following
+
+This will show you a list of the subscriptions you have access to. Scan the list to find the one you want to deploy into and select it by using the following
+
 ```
 az account set --subscription [name or ID]
 ```
+
 You can confirm you're in the right subscription by running:
 
 ```
@@ -98,12 +109,13 @@ Once that is created you'll see the following:
 }
 ```
 
-You'll then need to give your newly created service principle access to your web app.  The easiest way to do this is to navigate to the web app or the resource group that contains it and add the service principle as a contributor.  You can check this has been done successfully by navigating to the Role Assignments tab:
+You'll then need to give your newly created service principle access to your web app. The easiest way to do this is to navigate to the web app or the resource group that contains it and add the service principle as a contributor. You can check this has been done successfully by navigating to the Role Assignments tab:
 
 ![Service Principle](/static/images/bit-bucket-pipelines/service-principle.png)
 
 ### Pipelines Configuration
-After we've got our service principle setup, we can now configure the deployment pipeline.  To add a deployment step we need to add the following to our pipeline:
+
+After we've got our service principle setup, we can now configure the deployment pipeline. To add a deployment step we need to add the following to our pipeline:
 
 ```yaml
 - step:
@@ -114,7 +126,7 @@ After we've got our service principle setup, we can now configure the deployment
       - echo "Deploying to test environment"
 ```
 
-This will add a deployment to our 'test' environment.  To deploy to our web app we need to add the following into the `script` section:
+This will add a deployment to our 'test' environment. To deploy to our web app we need to add the following into the `script` section:
 
 ```yaml
 - step:
@@ -134,26 +146,27 @@ This will add a deployment to our 'test' environment.  To deploy to our web app 
           # DEBUG: '<boolean>' # Optional.
 ```
 
-This is a manual deployment step, meaning we must trigger this ourselves from within bit bucket.  If you want this to be automated simply remove the `trigger`.  To do the deployment we are relying on a *pipe*.  *Pipes* are existing functionality that we can leverage in our pipeline.  In our case we are using the *azure-web-apps-deploy:1.0.3* pipe when has been provided by Microsoft.  
+This is a manual deployment step, meaning we must trigger this ourselves from within bit bucket. If you want this to be automated simply remove the `trigger`. To do the deployment we are relying on a _pipe_. _Pipes_ are existing functionality that we can leverage in our pipeline. In our case we are using the _azure-web-apps-deploy:1.0.3_ pipe when has been provided by Microsoft.
 
-We need to configure all the required variables.  In particular we are referencing three repository variables:
+We need to configure all the required variables. In particular we are referencing three repository variables:
+
 - `$AZURE_APP_ID`
 - `$AZURE_PASSWORD`
 - `$AZURE_TENANT_ID`
 
-This is all secure information and as such we don't want to store this in our `pipelines.yml` which is committed to source control.  These instead can be set as environment variables:
+This is all secure information and as such we don't want to store this in our `pipelines.yml` which is committed to source control. These instead can be set as environment variables:
 
 ![Repository Variables](/static/images/bit-bucket-pipelines/repository-variables.png)
 
-This values for these variables comes from the response to our `az ad sp create-for-rbac` command.  If we push these pipeline changes we will now see our deployment step in the pipeline:
+This values for these variables comes from the response to our `az ad sp create-for-rbac` command. If we push these pipeline changes we will now see our deployment step in the pipeline:
 
 ![Deployment Step](/static/images/bit-bucket-pipelines/deployment-step.png)
 
-Clicking the *Deploy* button will take us to a dialog:
+Clicking the _Deploy_ button will take us to a dialog:
 
 ![Deployment Dialog](/static/images/bit-bucket-pipelines/deployment-dialog.png)
 
-If this was a commercial project and we were using Jira, we would also see the Jira tickets shown above.  Now, if all has gone well we will see a successful deployment step in BitBucket:
+If this was a commercial project and we were using Jira, we would also see the Jira tickets shown above. Now, if all has gone well we will see a successful deployment step in BitBucket:
 
 ![Successful Deployment](/static/images/bit-bucket-pipelines/successful-deployment-part-2.png)
 
@@ -163,12 +176,14 @@ And our website is now live!
 
 And we're done...
 
-<img src="/static/images/bit-bucket-pipelines/mic-drop.gif" alt="Mic Drop" width="100%"/>
+<img src="/static/images/bit-bucket-pipelines/mic-drop.gif" alt="Mic Drop" width="100%" />
 
 ## Additional Pipes
-We've now seen how the `microsoft/azure-web-apps-deploy` pipe can be used to deploy to web apps.  
+
+We've now seen how the `microsoft/azure-web-apps-deploy` pipe can be used to deploy to web apps.
 
 There are several other pre-built pipes to deploy to other common Azure services and all work in similar ways:
+
 - [Azure Web App Pipe](https://bitbucket.org/microsoft/azure-web-apps-deploy/src/master/)
 - [Azure Function App Pipe](https://bitbucket.org/microsoft/azure-functions-deploy/src/master/)
 - [Azure Storage Pipe](https://bitbucket.org/microsoft/azure-storage-deploy/src/master/)
@@ -176,9 +191,10 @@ There are several other pre-built pipes to deploy to other common Azure services
 You can search for more pipes in the [pipelines validator](https://bitbucket-pipelines.prod.public.atl-paas.net/validator)
 
 ## Summary
-In this post we've seen how to package up an ASP.NET Core Web App via pipelines, and output that package as an artifact.  We then saw how to set up a service principle, and leverage them for secure deployments. And lastly, we saw how to configure the web app pipe, to push our package to Azure.
 
-There was a few steps involved, but our end result is a reliable secure pipeline that publishes a package to our Azure environment.  Achieving all this without having to manage an on-premise build server, is a big win in my books! 😎
+In this post we've seen how to package up an ASP.NET Core Web App via pipelines, and output that package as an artifact. We then saw how to set up a service principle, and leverage them for secure deployments. And lastly, we saw how to configure the web app pipe, to push our package to Azure.
+
+There was a few steps involved, but our end result is a reliable secure pipeline that publishes a package to our Azure environment. Achieving all this without having to manage an on-premise build server, is a big win in my books! 😎
 
 In Part 3, I'll cover how to use Bit Bucket Pipelines to deploy a React app to Azure Blob Storage.
 
