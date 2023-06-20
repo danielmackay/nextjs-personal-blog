@@ -1,0 +1,124 @@
+---
+title: 'Demystifying Architectural Decision Records: Why Every Project Needs Them'
+date: '2023-06-20'
+lastmod: '2023-06-20'
+tags: ['architecture', 'adr']
+draft: false
+summary: In the world of software development, Architectural Decision Records (ADRs) are indispensable for capturing and communicating crucial architectural choices throughout a project's lifecycle. This blog post explores the significance of ADRs, emphasizing their role in providing historical context, promoting transparency and accountability, facilitating collaboration, and enabling informed decision-making. It also offers practical insights on creating and maintaining ADRs effectively. By embracing ADRs, software development teams can enhance project clarity, foster collaboration, and make more informed decisions, leading to successful and resilient projects.
+images:
+  [
+    '/static/images/demystifying-architectural-decision-records-why-every-project-needs-them/banner.png',
+  ]
+---
+
+![Banner](/static/images/demystifying-architectural-decision-records-why-every-project-needs-them/banner.png)
+
+## Introduction
+
+In the fast-paced world of software development, making informed decisions about architectural design is crucial to the success and maintainability of a project. However, as projects evolve and teams change, it becomes challenging to keep track of the rationale behind these decisions. This is where Architecture Decision Records (ADRs) come into play. ADRs provide a structured approach to capturing and documenting key architectural choices, ensuring that their context and intent are preserved over time. In this blog post, we will delve into the world of ADRs, exploring their importance, types, and effective practices for creating and maintaining them.
+
+## What are Architecture Decision Records?
+
+Architecture Decision Records (ADRs) are concise, self-contained documents that capture the reasoning behind significant architectural decisions made during the software development lifecycle. Each ADR typically focuses on a single decision, providing essential details such as the problem statement, proposed solutions, trade-offs, and the selected approach. By documenting these decisions, ADRs serve as a historical record of a project's architecture, enabling better collaboration, knowledge sharing, and informed decision-making for future developers.
+
+Although originally ADRs were meant for documenting architectural decisions, they can also be used to document other types of decisions, such as design, implementation, and testing. In fact, ADRs can be used to document **any decision** that has a significant impact on the project's architecture or design.
+
+## Why are ADRs important?
+
+ADRs play an important role in software development for several reasons:
+
+1. Documentation and Historical Context: As projects evolve and teams change, it becomes crucial to maintain the context and rationale behind architectural decisions. ADRs ensure that future developers can understand the reasoning behind these choices, reducing the time and effort spent on reverse engineering and increasing overall project comprehension.
+2. Collaboration and Communication: ADRs serve as a medium for communication among team members. They enable developers to explain their thought processes, gather feedback, and foster a shared understanding of architectural decisions, resulting in better collaboration and alignment within the team.
+3. Informed Decision-Making: ADRs enable informed decision-making by outlining the options considered, the rationale behind the chosen approach, and any trade-offs involved. This empowers teams to make well-informed choices and avoid repeating past mistakes.
+4. Decision Re-evaluation: Over time, architectural decisions may need to be re-evaluated due to changing requirements or technological advancements. ADRs act as a reference point, allowing teams to revisit past choices, reassess their effectiveness, and make more informed decisions going forward.
+5. Avoiding blind acceptance or reversal: ADRs help teams avoid blindly accepting or reversing architectural decisions. Instead, they encourage developers to understand the reasoning behind these choices and make informed decisions based on their context and intent.
+
+## ADR Templates
+
+There are three main types of ADR templates:
+
+### ADR
+
+The original template from Michael Nygard's blog post, [Documenting Architecture Decisions](http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions), is the most common type of ADR. It consists of the following sections:
+
+1. Title: A short, descriptive title for the decision.
+2. Status: The status of the decision, such as "proposed," "accepted," or "deprecated."
+3. Context: The context in which the decision was made, including the problem statement, constraints, and requirements.
+4. Decision: The decision itself, including the options considered, rationale, and trade-offs.
+5. Consequences: The consequences of the decision, such as benefits, costs, and risks.
+
+### MADR
+
+The [MADR](https://adr.github.io/madr/) (Markdown Architectural Decision Records) is a more comprehensive template that is a variation of the original ADR template. Many of its sections are optional, and it includes the following sections:
+
+1. Title: A short, descriptive title for the decision.
+2. Status: The status of the decision, such as "proposed," "accepted," or "deprecated."
+3. Context and Problem Statement: The context in which the decision was made, including the problem statement, constraints, and requirements.
+4. Decision Drivers: The factors that influenced the decision, such as business goals, technical requirements, and constraints. (optional)
+5. Considered Options: The options considered, including their pros and cons. (optional)
+6. Decision Outcome: The decision itself, including the rationale, trade-offs, and any risks involved.
+7. Consequences: The consequences of the decision, such as benefits, costs, and risks. (optional)
+8. Pros and Cons: The pros and cons of the decision, including benefits, costs, and risks. (optional)
+9. Links: Links to relevant resources, such as documentation, code, and other ADRs. (optional)
+
+### Y-Statements
+
+The [Y-Statements](https://medium.com/olzzio/y-statements-10eb07b5a177) are a lightweight template template that consists of the following, each of which is a one line statement:
+
+1. Context: functional requirement (story, use case) or arch. component,
+2. Facing: non-functional requirement, for instance a desired quality,
+3. We decided: decision outcome (arguably the most important part),
+4. And neglected alternatives not chosen (not to be forgotten!),
+5. To achieve: benefits, the full or partial satisfaction of requirement(s),
+6. Accepting that: drawbacks and other consequences, for instance impact on other properties/context and effort/cost (both short term and long term).
+
+## How to create and maintain ADRs effectively
+
+ADRs are best stored as markdown files along side your codebase. You can create and manage these manually or use a tool like Log4Brains which provides a CLI creating and managing ADRs.
+
+### Log4Brains
+
+Log4Brains is a NPM package that allows you to create ADRs and preview them in a static site.
+
+This can be installed by running:
+
+```bash
+npm install -g log4brains
+```
+
+You can then initialize your git repo by running:
+
+```bash
+log4brains init
+```
+
+Which will guide you through a simple process.
+
+To create a new ADR, run:
+
+```bash
+log4brains adr new
+```
+
+Lastly, to preview your ADRs, run:
+
+```bash
+log4brains preview
+```
+
+You can find an example of the static site published here: [danielmackay.github.io/dotnet-domain-driven-design/](https://danielmackay.github.io/dotnet-domain-driven-design/log4brains/adr/20230604-use-markdown-architectural-decision-records/)
+
+![static site](/static/images/demystifying-architectural-decision-records-why-every-project-needs-them/static-site.png)
+
+## Conclusion
+
+In the ever-changing landscape of software development, Architectural Decision Records (ADRs) serve as valuable artifacts for capturing and preserving the reasoning behind significant architectural choices. By documenting decisions, ADRs enable better collaboration, knowledge sharing, and informed decision-making for current and future developers. Embracing ADRs as part of the software development process empowers teams to navigate architectural complexities, maintain context, and evolve their projects with confidence. So, start documenting your architectural decisions today, and pave the way for a more successful and sustainable software development journey.
+
+## Resources
+
+- [adr.github.io](https://adr.github.io/)
+- [adr.github.io/madr/](https://adr.github.io/madr/)
+- [github.com/thomvaill/log4brains](https://github.com/thomvaill/log4brains)
+- [ardalis.com/getting-started-with-architecture-decision-records/](https://ardalis.com/getting-started-with-architecture-decision-records/)
+- [cognitect.com/blog/2011/11/15/documenting-architecture-decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
+- [medium.com/olzzio/y-statements-10eb07b5a177](https://medium.com/olzzio/y-statements-10eb07b5a177)

@@ -4,5 +4,9 @@
       "language": "mdx",
       "scheme": "file"
     }
-  ]
+  ],
+  "markdown.copyFiles.destination": {
+    "/data/blog/**/*": "images/${documentFileName}/"
+  },
+  "pasteImage.basePath": "${currentFileDir}"
 }
