@@ -1,0 +1,205 @@
+---
+title: 'Domain Driven Design: Patterns for Aggregate Creation Mastery'
+date: '2023-07-01'
+tags: ['domain-driven-design', 'architecture', 'dotnet', 'csharp']
+draft: false
+summary: In this blog post, we will dive deep into the realm of aggregate creation and explore various patterns that can elevate your mastery of this crucial aspect of DDD. We will uncover the principles and techniques that empower you to design aggregates that are expressive, cohesive, and well-aligned with your domain's intricacies.
+images: ['/static/images/domain-driven-design-aggregate-initialisation-in-net-7/banner.png']
+canonicalUrl: https://www.dandoescode.com/blog/domain-driven-design-patterns-for-aggregate-creation-mastery
+---
+
+![Banner](/static/images/domain-driven-design-patterns-for-aggregate-creation-mastery/banner.png)
+
+In the world of software development, designing effective and scalable domain models is crucial for building robust and maintainable applications. Domain-Driven Design (DDD) provides a set of principles and practices that can help us tackle complex business domains with confidence.
+
+In this blog post, we will dive deep into the realm of aggregate creation and explore various patterns that can elevate your mastery of this crucial aspect of DDD. We will uncover the principles and techniques that empower you to design aggregates that are expressive, cohesive, and well-aligned with your domain's intricacies.
+
+So, let's embark on this exploration of aggregate creation patterns in Domain-Driven Design and unlock the path to mastering the art of designing effective and cohesive domain models. Get ready to elevate your domain modeling skills and take your software development endeavors to new heights!
+
+## What is an Aggregate?
+
+One of the key concepts in DDD is the notion of aggregates. Aggregates act as cohesive units that encapsulate a cluster of related domain objects, enforcing consistency and transactional boundaries within the system. However, creating aggregates that truly embody the essence of the domain and exhibit high cohesion can be a challenging task.
+
+## Aggregate Creation Goals
+
+When designing aggregates, we want to ensure that they are cohesive and expressive. We also want to avoid creating aggregates that are too large or too small. In other words, we want to strike a balance between cohesion and granularity.
+
+There are several goals that we want to achieve when designing aggregates:
+
+1. Initialize all required properties
+2. Always be in a valid state
+3. Allow for domain events to be raised
+4. Allow value objects to be passed in
+5. Play nicely with EF Core
+
+## Aggregate Creation Patterns
+
+For all of the patterns below, we will be using the following `AggregateRoot` base class:
+
+```csharp
+public abstract class AggregateRoot
+{
+    private readonly List<DomainEvent> _domainEvents = new();
+
+    public IReadOnlyList<DomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+
+    public void AddDomainEvent(DomainEvent domainEvent) => _domainEvents.Add(domainEvent);
+
+    public void RemoveDomainEvent(DomainEvent domainEvent) => _domainEvents.Remove(domainEvent);
+
+    public void ClearDomainEvents() => _domainEvents.Clear();
+}
+```
+
+We also will reference the following `Money` record:
+
+```csharp
+public record Money(Currency Currency, decimal Amount)
+{
+    public static Money Default => new(Currency.Default, 0);
+
+    public static Money Zero => Default;
+
+    public static Money operator +(Money left, Money right) => new Money(left.Currency, left.Amount + right.Amount);
+
+    public static Money operator -(Money left, Money right) => new Money(left.Currency, left.Amount - right.Amount);
+
+    public static bool operator <(Money left, Money right) => left.Amount < right.Amount;
+
+    public static bool operator <=(Money left, Money right) => left.Amount <= right.Amount;
+
+    public static bool operator >(Money left, Money right) => left.Amount > right.Amount;
+
+    public static bool operator >=(Money left, Money right) => left.Amount >= right.Amount;
+}
+```
+
+Lastly for completeness, we will reference the following `Currency` record:
+
+```csharp
+public record Currency
+{
+    public string Symbol { get; }
+
+    public Currency(string symbol)
+    {
+        if (symbol.Length != 3)
+            throw new DomainException("Invalid currency symbol.");
+
+        Symbol = symbol.ToUpper();
+    }
+
+    public static Currency Default => new Currency("AUD");
+}
+```
+
+### Pattern 1: `required init` Properties
+
+```csharp
+public class Order : AggregateRoot
+{
+    public OrderId Id { get; } = new OrderId(Guid.NewGuid());
+
+    public required CustomerId CustomerId { get; init; } = null!;
+
+    public required OrderStatus Status { get; private set; } = OrderStatus.None;
+
+    public Customer? Customer { get; private set; }
+
+    public Money AmountPaid { get; private set; } = Money.Zero;
+
+    public Order()
+    {
+        AddDomainEvent(new OrderCreatedEvent(Id, CustomerId));
+    }
+}
+```
+
+Constructing an Aggregate using `required init` ensures that read-only properties get populated on creation. However, for properties we want to populate on creation, but also modify after (e.g. `Status`), we need to use a private setter. This seems well and good, but this code won't compile. We will get a warning of:
+
+```text
+Required member 'DDD.Domain.Orders.Order.Status' cannot be less visible or have a setter less visible than the containing type 'DDD.Domain.Orders.Order'
+```
+
+We also have the issue of the domain events being created every time the object is constructed. This will happen every time we load the aggregate from the database. This is not ideal, as we only want to raise the `OrderCreatedEvent` when the aggregate is first created.
+
+### Pattern 2: Constructor
+
+```csharp
+public class Order : AggregateRoot
+{
+    public OrderId Id { get; }
+
+    public CustomerId CustomerId { get; private set; }
+
+    public OrderStatus Status { get; private set; }
+
+    public Customer? Customer { get; private set; }
+
+    public Money AmountPaid { get; private set; }
+
+    public Order(CustomerId customerId, Money amountPaid)
+    {
+        Guard.Against.ZeroOrNegative(amountPaid.Amount);
+
+        Id = new OrderId(Guid.NewGuid());
+        CustomerId = customerId;
+        AmountPaid = amountPaid;
+        OrderStatus = OrderStatus.None;
+
+        AddDomainEvent(new OrderCreatedEvent(Id, CustomerId));
+    }
+}
+```
+
+We now have a consistent use of properties that makes our class more readable, but we still have the same problem with the domain events being created every time the object is constructed. We also have the issue of the `Id` property being set in the constructor. This is not ideal, as we want to ensure that the `Id` is always set when the object is created by the application (as opposed from being hydrated from the database).
+
+We also now have an even worse problem. The entity cannot be constructed by EF Core which breaks one of our goals. The reason is that EF is not able to pass owned entities into the constructor. This is a known limitation of EF Core and will cause an exception to be thrown.
+
+### Pattern 3: Factory Method
+
+```csharp
+public class Order : AggregateRoot
+{
+    public required OrderId Id { get; init; }
+
+    public CustomerId CustomerId { get; private set; } = null!;
+
+    public OrderStatus Status { get; private set; }
+
+    public Customer? Customer { get; private set; }
+
+    public Money AmountPaid { get; private set; } = null!;
+
+    private Order() { }
+
+    public static Order Create(CustomerId customerId, Money amountPaid)
+    {
+        Guard.Against.ZeroOrNegative(amountPaid.Amount);
+
+        var order = new Order()
+        {
+            Id = new OrderId(Guid.NewGuid()),
+            CustomerId = customerId,
+            AmountPaid = amountPaid,
+            Status = OrderStatus.None
+        };
+
+        order.AddDomainEvent(OrderCreatedEvent.Create(order));
+
+        return order;
+    }
+}
+```
+
+We now arrive at our third and final pattern - the factory method. There is a bit more going on here. We have a private constructor that is used by EF Core to create the object. We also have a public static factory method that is used to create the object. This method is responsible for creating the domain events and adding them to the aggregate. One downside of this is that we need to use the null-forgiving operator on the properties that are not set in the constructor (i.e. `null!`).
+
+Unlike pattern 2, this does allow us to pass an owned entity into the constructor. It also, allows us to raise domain events appropriately. They will get raised when the application specifically creates an order, but not when EF Core hydrates the object from the database.
+
+Out of all of the patterns, this is the only one that satisfies all of our goals.
+
+## Conclusion
+
+In conclusion, mastering the art of aggregate creation is an important aspect of Domain-Driven Design (DDD) that significantly impacts the effectiveness and maintainability of software applications. Through the exploration of various patterns for aggregate creation in DDD, we have identified the challenges and considerations involved in designing aggregates that align with the domain's intricacies. While different patterns were examined, the factory method pattern emerged as the most comprehensive and effective approach, striking a balance between expressiveness, cohesion, and domain event handling. By adopting this pattern and incorporating the principles and techniques discussed, developers can enhance their skills in creating aggregates that embody the core concepts of the domain, maintain a valid state, and seamlessly integrate with the rest of the application. As part of the broader scope of DDD, aggregate creation serves as a crucial building block in constructing robust and domain-centric applications, and by embracing DDD principles holistically, developers can elevate their software craftsmanship and deliver exceptional solutions to complex business domains.
+
+What other patterns have you used to create your aggregates? Have you found anything better? Let me know in the comments below.
