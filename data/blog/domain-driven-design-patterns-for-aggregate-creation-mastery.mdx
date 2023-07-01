@@ -14,8 +14,6 @@ In the world of software development, designing effective and scalable domain mo
 
 In this blog post, we will dive deep into the realm of aggregate creation and explore various patterns that can elevate your mastery of this crucial aspect of DDD. We will uncover the principles and techniques that empower you to design aggregates that are expressive, cohesive, and well-aligned with your domain's intricacies.
 
-Whether you are a seasoned DDD practitioner or just beginning your journey into domain modeling, this blog post will provide you with valuable insights and practical guidance to enhance your skills in creating aggregates that truly embody your domain's core concepts.
-
 So, let's embark on this exploration of aggregate creation patterns in Domain-Driven Design and unlock the path to mastering the art of designing effective and cohesive domain models. Get ready to elevate your domain modeling skills and take your software development endeavors to new heights!
 
 ## What is an Aggregate?
@@ -28,11 +26,11 @@ When designing aggregates, we want to ensure that they are cohesive and expressi
 
 There are several goals that we want to achieve when designing aggregates:
 
-1. Should initialize all required properties
-2. Should always be in a valid state
-3. Should allow for domain events to be raised
-4. Should allow value objects to be passed in
-5. Should work well with EF Core
+1. Initialize all required properties
+2. Always be in a valid state
+3. Allow for domain events to be raised
+4. Allow value objects to be passed in
+5. Play nicely with EF Core
 
 ## Aggregate Creation Patterns
 
@@ -53,7 +51,7 @@ public abstract class AggregateRoot
 }
 ```
 
-We also, will reference the following `Money` record:
+We also will reference the following `Money` record:
 
 ```csharp
 public record Money(Currency Currency, decimal Amount)
@@ -95,12 +93,10 @@ public record Currency
 }
 ```
 
-> NOTE: Currency is a similar record class
-
 ### Pattern 1: `required init` Properties
 
 ```csharp
-public class Order: AggregateRoot
+public class Order : AggregateRoot
 {
     public OrderId Id { get; } = new OrderId(Guid.NewGuid());
 
@@ -119,7 +115,7 @@ public class Order: AggregateRoot
 }
 ```
 
-Constructing an aggregate using `required init` ensures that read-only properties get populated on creation. However, for properties we want to populate on creation, but also modify after (e.g. `Status`), we need to use a private setter. This seems well and good, but this code won't compile. We will get a warning of:
+Constructing an Aggregate using `required init` ensures that read-only properties get populated on creation. However, for properties we want to populate on creation, but also modify after (e.g. `Status`), we need to use a private setter. This seems well and good, but this code won't compile. We will get a warning of:
 
 ```text
 Required member 'DDD.Domain.Orders.Order.Status' cannot be less visible or have a setter less visible than the containing type 'DDD.Domain.Orders.Order'
@@ -130,7 +126,7 @@ We also have the issue of the domain events being created every time the object 
 ### Pattern 2: Constructor
 
 ```csharp
-public class Order: AggregateRoot
+public class Order : AggregateRoot
 {
     public OrderId Id { get; }
 
@@ -150,19 +146,20 @@ public class Order: AggregateRoot
         CustomerId = customerId;
         AmountPaid = amountPaid;
         OrderStatus = OrderStatus.None;
+
         AddDomainEvent(new OrderCreatedEvent(Id, CustomerId));
     }
 }
 ```
 
-We now have a consistent use of properties that makes our class more readable, but we still have the same problem with the domain events being created every time the object is constructed. We also have the issue of the `Id` property being set in the constructor. This is not ideal, as we want to ensure that the `Id` is always set when the object is created.
+We now have a consistent use of properties that makes our class more readable, but we still have the same problem with the domain events being created every time the object is constructed. We also have the issue of the `Id` property being set in the constructor. This is not ideal, as we want to ensure that the `Id` is always set when the object is created by the application (as opposed from being hydrated from the database).
 
 We also now have an even worse problem. The entity cannot be constructed by EF Core which breaks one of our goals. The reason is that EF is not able to pass owned entities into the constructor. This is a known limitation of EF Core and will cause an exception to be thrown.
 
 ### Pattern 3: Factory Method
 
 ```csharp
-public class Order: AggregateRoot
+public class Order : AggregateRoot
 {
     public required OrderId Id { get; init; }
 
