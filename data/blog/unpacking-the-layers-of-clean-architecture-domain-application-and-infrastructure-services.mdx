@@ -1,9 +1,99 @@
 ---
 title: Unpacking the Layers of Clean Architecture – Domain, Application, and Infrastructure Services
 date: '2023-10-21'
-tags: ['clean architecture']
+tags: ['clean-architecture', 'architecture', 'dotnet']
 draft: false
 summary: Unpacking the Layers of Clean Architecture – Domain, Application, and Infrastructure Services
-images: []
+images: ['/static/images/clean-architecture-services/banner.png']
 layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/powershell-scripting-introduction
 ---
+
+![Powershell](/static/images/clean-architecture-services/banner.png)
+
+Recently, I’ve noticed some confusion relating to Clean Architecture and the concept of ‘services’. In popular Clean Architecture templates such as the [SSW CA Template](https://github.com/SSWConsulting/SSW.CleanArchitecture) and [Jason Taylor’s CA template](https://github.com/jasontaylordev/CleanArchitecture), there is a single service called `DateTimeService` in the `Infrastructure` project. This can mistakenly lead developers to think this is where ALL services should live (which is not the case).
+
+This post will use the term ‘service’, but other terms like ‘manager’, ‘helper’, or ‘utilities’ are equally applicable.
+
+So where should services live? Let’s dive in and take a look.
+
+## Clean Architecture Overview
+
+Before we discuss services, let’s touch on the different layers within Clean Architecture and what the purpose of each layer is
+
+- **Presentation**: UI or API related concerns
+- **Application**: Business logic and orchestration
+- **Domain**: Entities and business logic (when using DDD)
+- **Infrastructure**: Integration with external systems (DB, Network, Disk, API, etc)
+
+For a more in-depth explanation, see my [previous blog post](https://www.dandoescode.com/blog/clean-architecture-an-introduction).
+
+## What is a Service and when should I use one?
+
+A service is a somewhat overloaded term. Generally, it is a class that contains functionality relating to a single responsibility. Depending on the layer the service lives in, the responsibility will be slightly different.
+
+A service can be a good idea whenever you need to re-use common logic, or encapsulate some underlying infrastructure.
+
+## What is an Application Service?
+
+Many Clean Architecture templates (such as the ones above), use [MediatR](https://github.com/jbogard/MediatR) to help facilitate CQRS commands and queries. Most of your logic should live in the `Application` layer in your MediatR handlers (or alternatively, in the `Domain` if you are using Domain Driven Design).
+
+However, there are times when you may need to share logic between commands and queries. This is where services come in to play. Services can be placed in a common area and re-used as needed.
+
+But remember, you should default to placing your logic in MediatR handlers. Only use services for truly common code.
+
+Application services are typically unit testable as they are free of infrastructure concerns.
+
+## What is a Domain Service?
+
+When using Domain-Driven Design, we are often mapping real world nouns to entities in our software. However, sometimes we come across a concept that “just isn’t a thing”. In these cases, it’s appropriate to create a service instead.
+
+Eric Evans states that a good `Domain` service has 3 characteristics:
+
+1. The operation relates to a domain concept that is not a natural part of an ENTITY or VALUE OBJECT
+2. The interface is defined in terms of other elements of the domain model
+3. The operation is stateless
+
+We need to take care when creating services that we are not stripping all the behavior from domain entities.
+
+`Domain` services are typically unit testable as they are free of persistence concerns.
+
+## What is an Infrastructure Service?
+
+To decouple `Infrastructure` from `Application` in Clean Architecture, we create Interfaces in `Application` that are implemented in `Infrastructure`. This allows us to write the business logic in our MediatR handlers against the interfaces without being coupled to the specific implementation. This is all thanks to the Dependency Inversion Principle. 💪
+
+It’s worth keeping in mind that we want to keep our `Infrastructure` services as small as possible and ensure that any business logic stays in the `Application` layer.
+
+A good rule of thumb when calling into the `Infrastructure` Layer is to “get in, and get out quick”.
+
+`Infrastructure` services are typically not unit testable, but may be covered in integration tests.
+
+### Do you need an Infrastructure Service at all?
+
+`Infrastructure` services facilitate the communicate with out outside piece of infrastructure. Due to this some developers like using the term ‘Broker’ which can more accurately describe the function that `Infrastructure` services tend to perform.
+
+## Service Examples
+
+| Layer            | Service                 | Responsibilities                                                                                                                                                                                                              |
+| ---------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Application`    | `AccountExportService`  | - Validates the account exists <br/> - Queries the DB for all transactions belonging to the account<br /> - Passes the data to Infrastructure to generate an XML file <br /> - Returns the XML file to the Presentation layer |
+| `Domain`         | `TaxCalculationService` | - Based on applicable tax rates and account funds will calculate and return the amount of tax that needs to be applied <br /> - Doesn’t update the state of any entities.                                                     |
+| `Infrastructure` | `EmailService`          | - Sends Emails via a 3rd party service such as SendGrid or Mail Chimp.                                                                                                                                                        |
+
+## Service Cheat Sheet
+
+| Layer            | Purpose                        | Testing                  |
+| ---------------- | ------------------------------ | ------------------------ |
+| `Domain`         | Business Logic                 | Unit Tests               |
+| `Application`    | Business Logic / Orchestration | Unit Tests               |
+| `Infrastructure` | Abstraction                    | Infrastructure Testing\* |
+
+\*Persistence services can be integration tested, but other forms of infrastructure are usually mocked out.
+
+## Conclusion
+
+As we’ve seen services don’t need to all live in a single layer within Clean Architecture. They can be spread across `Domain`, `Application`, and `Infrastructure` depending on the responsibility of the service. `Domain` Services should be used for `Domain` Logic when using DDD. `Application` services should be used for common application logic and orchestration. `Infrastructure` services should be used for `Infrastructure` related implementations.
+
+When appropriate services can make sense, but we need to be careful that they don’t become dumping grounds for everything. Logic should still go into our commands/queries/domain model as appropriate.
+
+Do you have any other ways to distinguish different types of services? Please let me know in the comments below.
