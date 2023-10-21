@@ -63,6 +63,16 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
 
+## Creating a Blog Post
+
+Run the following command:
+
+```bash
+node ./scripts/compose.js
+```
+
+Then follow the interactive prompt to generate a post with pre-filled front matter.
+
 ## Extend / Customize
 
 `data/siteMetadata.js` - contains most of the site related information which should be modified for a user's need.
@@ -93,9 +103,7 @@ You can start editing the page by modifying `pages/index.js`. The page auto-upda
 
 `next.config.js` - configuration related to Next.js. You need to adapt the Content Security Policy if you want to load scripts, images etc. from other domains.
 
-## Post
-
-### Frontmatter
+## Frontmatter
 
 Frontmatter follows [Hugo's standards](https://gohugo.io/content-management/front-matter/).
 
@@ -130,12 +138,6 @@ layout: PostLayout
 canonicalUrl: https://tailwind-nextjs-starter-blog.vercel.app/blog/introducing-tailwind-nextjs-starter-blog
 ---
 ```
-
-### Compose
-
-Run `node ./scripts/compose.js` to bootstrap a new post.
-
-Follow the interactive prompt to generate a post with pre-filled front matter.
 
 ## License
 
