@@ -1,0 +1,44 @@
+---
+title: Rider - Automatically Nesting JSON Configuration Files
+date: '2023-12-16'
+tags: ['rider', 'csharp']
+draft: false
+summary: I've been using Visual Studio for a very long time.  Probably close to two decades.  It has it's strengths and weaknesses, but I've always been able to get the job done.  I've been using Rider for a few months now and I'm really enjoying it.  I made the switch partially to try something new, and partially from some mild peer pressure from all the young guns in the office.  It's a great IDE and I'm finding it to be a great alternative to Visual Studio.  Recently, I noticed that JSON configuration files (as are commonly found in ASP.NET Core projects) were not nested like they normally are in Visual Studio.  I googled around for a solution, but after a reading a few inadequate solutions, I decided to write my own.  I'm sharing it here in case anyone else is looking for a solution.'
+images: ['/static/images/rider-automatically-nesting-json-configuration-files/banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/rider-automatically-nesting-json-configuration-files
+---
+
+![Banner](/static/images/rider-automatically-nesting-json-configuration-files/banner.png)
+
+I've been using Visual Studio for a very long time. Probably close to two decades. It has it's strengths and weaknesses, but I've always been able to get the job done. I've been using Rider for a few months now and I'm really enjoying it. I made the switch partially to try something new, and partially from some mild peer pressure from all the young guns in the office. It's a great IDE and I'm finding it to be a great alternative to Visual Studio.
+
+Recently, I noticed that JSON configuration files (as are commonly found in ASP.NET Core projects) were not nested like they normally are in Visual Studio. I googled around for a solution, but after a reading a few inadequate solutions, I decided to write my own. I'm sharing it here in case anyone else is looking for a solution.
+
+## The Problem
+
+In Visual Studio, JSON configuration files are nested by default. This is a nice feature because it keeps the project structure clean and organized. In Rider, JSON configuration files are not nested by default. This is a problem because it makes the project structure messy and disorganized.
+
+![Rider - non-nested files](/static/images/rider-automatically-nesting-json-configuration-files/screenshot1.png)
+
+While Rider does support nested files, it only works for hardcoded file suffixes (e.g. `.js` and `.map.js`). There is no way to wildcard the 'environment' part of the filename (e.g. `appsettings.Development.json`).
+
+## The Solution
+
+First navigate to `Solution` | `File Nesting Settings`:
+
+![Rider - File Nesting Settings](/static/images/rider-automatically-nesting-json-configuration-files/screenshot2.png)
+
+We can get around the lack of a wildcard filename, but using the specific environment names we have in our project (e.g. `Development`, `Staging`, `Production`).
+
+![Rider - Nesting configuration](/static/images/rider-automatically-nesting-json-configuration-files/screenshot3.png)
+
+Once this is done, you can see the files are now nested:
+
+![Rider - Nested JSON files](/static/images/rider-automatically-nesting-json-configuration-files/screenshot4.png)
+
+Hooray! 😎
+
+### Summary
+
+While, none of this is ground breaking, I hope it helps someone else out there. I'm really enjoying Rider and I'm looking forward to learning more about it. If you have any tips or tricks, please share them in the comments below.
