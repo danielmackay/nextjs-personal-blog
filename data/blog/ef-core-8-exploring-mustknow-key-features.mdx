@@ -1,0 +1,441 @@
+---
+title: EF Core 8 - Exploring Must-Know Key Features
+date: '2023-12-30'
+tags: ['entity-framework', 'dotnet', 'dotnet-8']
+draft: false
+summary: This blog post delves into the latest updates in Entity Framework Core ORM (EF Core 8), emphasizing its new features and performance improvements. Key highlights include Complex Types for more expressive models, Unmapped Queries for running SQL without an ORM setup, Primitive Collections to store lists of primitives without extra tables, and support for `DateOnly` and `TimeOnly` types. EF Core 8 also enhances Bulk Updates & Deletes, offers advanced JSON Column capabilities, introduces Hierarchy IDs for efficient hierarchical data management, and implements Sentinel Values for better control over database defaults.
+images: ['/static/images/ef-core-8-exploring-must-know-key-features/banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/ef-core-8-exploring-must-know-key-features
+---
+
+![Banner](/static/images/ef-core-8-exploring-must-know-key-features/banner.png)
+
+## Introduction
+
+EF Core 8 is the latest version of the Entity Framework Core ORM. It's a major release that brings with it a number of new features and performance enhancements. Now that EF Core has switched to an annual release cadence, we are now getting new ORM functionality at a much faster rate than ever.
+
+In this post, we'll take a look at some of the key features that you should know about.
+
+## New Features
+
+EF Core 8 includes 18 new features and enhancements. The full list can be found [here](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew). Let's take a look and what I think are the most important of these.
+
+### Complex Types
+
+When modeling our entities in EF, we don't have to use always use flat data structures. We can use nested data structures to group
+similar properties together and help us reason about our data.
+
+In EF Core 7, we used Owned Entities for this. These mostly worked, but had some limitations due to the use of entities under the hood.
+
+In EF Core 8, we now have Complex Types, which serve a similar purpose, but do not use entities under the hood. They more
+closely match a typical 'Value Object', that you may see in the DDD world. This allows us to create more expressive models, that we can also attach behavior to.
+
+Considering we have the following `Contact` and `Address` entities:
+
+```csharp
+public class Contact
+{
+    public int Id { get; init; }
+    public required string Name { get; init; }
+    public required Address Address { get; init; }
+}
+
+public class Address
+{
+    public required string Street { get; init; }
+    public required string City { get; init; }
+    public required string PostCode { get; init; }
+}
+```
+
+We can configure the `Address` as a complex type in our `DbContext`:
+
+```csharp
+public class ApplicationDbContext : DbContext
+{
+    public DbSet<Contact> Contacts { get; set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder
+            .Entity<Contact>()
+            .ComplexProperty(c => c.Address);
+    }
+}
+```
+
+The result in the DB is a single table with all the properties of the `Address` type:
+
+![Complex Types](/static/images/ef-core-8-exploring-must-know-key-features/complex-types.png)
+
+Use Cases:
+
+- Using value objects in DDD
+- Breaking up large entities into smaller, more logical chunks
+- Avoids some of the limitations of Owned Entities:
+  - Can be either a value type or reference type
+  - Can be shared by properties across multiple entities
+
+### Unmapped Queries
+
+Sometimes you might want to run queries against a DB you don't control, and you don't want the extra hassle of setting up a full ORM. Alternatively, you may be using CQRS and have a separate read and write model. You may also want to run some SQL that is not supported by EF Core (such as common table expressions, and window functions).
+
+In these cases you can use EF Core to execute unmapped queries.
+
+Consider the following `UnmappedProduct` class:
+
+```csharp
+public class UnmappedProduct
+{
+    public string Name { get; set; } = null!;
+}
+```
+
+We can then use this class to run a query against the DB:
+
+```csharp
+using var db = new ApplicationDbContext();
+var allProducts = db.Database
+    .SqlQuery<UnmappedProduct>($"SELECT Name FROM Products")
+    .ToList();
+```
+
+Use Cases:
+
+- Simple query and command scenarios that don't require entities to be registered with EF Core
+- Provide 'Dapper-like' functionality for simple queries and commands
+- Increased performance for queries and commands that don't require entities
+- Allows us to easily have separate read and write models
+
+### Primitive Collections
+
+Primitive Collections allow us to store a list of primitive values in a column WITHOUT having to create a separate table. EF Core will automatically do this for any primitive collections on our entities. This doesn't require any special configuration.
+
+Consider the following `Product` and `Color` classes:
+
+```csharp
+public class Product
+{
+    public int Id { get; private set; }
+    public required string Name { get; init; }
+
+    public List<Color> Colors { get; init; } = [];
+}
+
+public enum Color
+{
+    Red = 1,
+    Green,
+    Blue
+}
+```
+
+After inserting some data to the DB and inspecting the table, will see that EF Core has created a `Colors` column as follows:
+
+![Primitive Collections](/static/images/ef-core-8-exploring-must-know-key-features/primitive-collections.png)
+
+We can still use EF to query this data as we usually would.
+
+Use Cases:
+
+- Keep DB Schema clean without having to create unneeded tables for primitive collections
+
+### DateOnly & TimeOnly Support
+
+In previous versions of EF Core if we wanted to store either a date or time the only option we had was to use `DateTime` in our models. This left us with messy code that had to constantly ignore the date or time component of the `DateTime` object.
+
+EF Core 8.0 introduces support for the `DateOnly` and `TimeOnly` types. These are value types that represent a date or time without a time zone. They are useful for storing dates and times without the overhead of a full `DateTime` object.
+
+We don't need any extra configuration. EF Core will handle this out of the box:
+
+```csharp
+public class Product
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public bool IsDeleted { get; set; }
+    public DateOnly DateCreated { get; set; }
+    public TimeOnly TimeCreated { get; set; }
+}
+```
+
+Use cases:
+
+- Storing only dates
+- Storing only time
+
+### Enhanced Bulk Updates & Deletes
+
+Bulk updates & deletes were introduced In EF Core 7, and were a really nice addition to the library. However, there were some limitations. Now in EF Core 8, we can do updates across multiple structures (however, they still need to live in the same table). This allows us to use Owned Entities and Complex Types to have a nicely structured domain model, but still be able to do bulk updates.
+
+Consider the following `ApplicationDbContext` and entities:
+
+```csharp
+public class Product
+{
+    public int Id { get; private set; }
+    public required string Name { get; init; }
+    public required Color Color { get; init; }
+}
+
+public class Color
+{
+    public ColorCode Code { get; init; }
+    public required string Name { get; init; }
+    public int NumInStock { get; init; }
+}
+
+public enum ColorCode
+{
+    Red = 1,
+    Green,
+    Blue
+}
+
+public class ApplicationDbContext : DbContext
+{
+    public DbSet<Product> Products => Set<Product>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder
+            .UseSqlServer(DbConnectionFactory.Create("EnhancedBulkUpdateAndDelete"));
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Product>().OwnsOne(p => p.Color);
+    }
+}
+```
+
+Use cases:
+
+- Bulk Update and Delete on Owned Entities and Complex Types
+
+### JSON Column Enhancements
+
+Support for JSON columns was introduced in EF Core 7. You could query and update JSON columns. But there were some limitations. EF Core 8 adds some more advanced JSON capabilities. We can now query JSON collections of complex objects.
+
+Consider the following `Product` and `Color` entities:
+
+```csharp
+public class Product
+{
+    public int Id { get; private set; }
+    public required string Name { get; init; }
+    public List<Color> Colors { get; init; } = [];
+}
+
+public class Color
+{
+    public ColorCode Code { get; init; }
+    public required string Name { get; init; }
+    public int NumInStock { get; init; }
+}
+
+public enum ColorCode
+{
+    Red = 1,
+    Green,
+    Blue
+}
+```
+
+We can configure `Product.Colors` as a JSON column in our `ApplicationDbContext`:
+
+```csharp
+public class ApplicationDbContext : DbContext
+{
+    public DbSet<Product> Products => Set<Product>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder
+            .UseSqlServer(DbConnectionFactory.Create("EnhancedJsonColumns"));
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Product>().OwnsMany(e => e.Colors, builder => builder.ToJson());
+    }
+}
+```
+
+As `Colors` is a list of complex objects, the data in our DB table will look as follows:
+
+![Primitive Collections](/static/images/ef-core-8-exploring-must-know-key-features/json-columns.png)
+
+And we can query `Colors` as we usually would with EF Core:
+
+```csharp
+using var db = new ApplicationDbContext();
+var blackProducts = db.Products
+    .AsNoTracking()
+    .SelectMany(p => p.Colors.Where(c => c.Code == ColorCode.Black))
+    .ToList();
+```
+
+Use cases:
+
+- Use JSON columns to store complex objects/arrays
+- Removes previous limitations of JSON queries
+
+### Hierarchy IDs
+
+Hierarchy IDs are a special data type in SQL Server that allow you to store and query hierarchical data. This is a great way to store data that has a parent-child relationship, such as a file system, organizational chart, or product categories. The DB is then able to run queries such as finding all descendants of a node, or finding the common ancestor of two nodes.
+
+This feature has been available in SQL server for a while, but EF Core 8 now allows us to use it in our models and help with the heavy lifting.
+
+_NOTE: You will need the CLR enabled on your SQL Server instance for this to work. The Azure SQL Edge Docker image does not support this._
+
+Consider the following `Employee` entity:
+
+```csharp
+public class Employee
+{
+    public int Id { get; private set; }
+    public required HierarchyId Path { get; init; }
+    public required string Name { get; init; }
+}
+```
+
+We can seed the hierarchies as follows:
+
+```csharp
+using var db = new ApplicationDbContext();
+
+var employees = new List<Employee>
+{
+    new() { Name = "CEO", Path = HierarchyId.Parse("/")},
+    new() { Name = "Product Manager", Path = HierarchyId.Parse("/1/")},
+    new() { Name = "Tech Lead", Path = HierarchyId.Parse("/1/1/")},
+    new() { Name = "Senior Dev", Path = HierarchyId.Parse("/1/1/1/")},
+    new() { Name = "Junior Dev", Path = HierarchyId.Parse("/1/1/2/")},
+    new() { Name = "Intern", Path = HierarchyId.Parse("/1/1/3/")},
+};
+
+db.Employees.AddRange(employees);
+db.SaveChanges();
+```
+
+We can get team members under the Tech Lead:
+
+```csharp
+var techLead = db.Employees.First(e => e.Path == HierarchyId.Parse("/1/1/"));
+var techLeadSubordinates = db.Employees
+    .AsNoTracking()
+    .Where(e => e.Path.IsDescendantOf(techLead.Path))
+    .ToList();
+```
+
+We can get the managers above the Tech Lead:
+
+```csharp
+IQueryable<Employee> FindAllAncestors(string name)
+    => db.Employees.Where(
+            ancestor => db.Employees
+                .Single(
+                    descendent =>
+                        descendent.Name == name
+                        && ancestor.Id != descendent.Id)
+                .Path.IsDescendantOf(ancestor.Path))
+        .OrderByDescending(ancestor => ancestor.Path.GetLevel());
+
+var techLeadManagers = FindAllAncestors("Tech Lead").ToList();
+```
+
+And we can ask questions about the hierarchy such as:
+
+```csharp
+techLead.Path.IsDescendantOf(ceo.Path); // true
+ceo.Path.IsDescendantOf(techLead.Path); // false
+```
+
+Use Cases:
+
+- Store and query hierarchical (i.e. tree-like) data:
+  - An organizational structure
+  - A file system
+  - A set of tasks in a project
+  - A taxonomy of language terms
+  - A graph of links between Web pages
+
+### Sentinel Values
+
+EF Core can configure SQL Server to use Database defaults. For this to work, EF needs to know when NOT to send a value to the DB so that the DB can use the default value. It does this by using the `default` value of the .NET CLR type This works well for reference types, but not so well for value types.
+
+In some cases the CLR default value is a value valid to insert. For example, when creating an account we may want to default credit property to `10`. This means that we're not able to create an account with the default CLR value of `0`, as EF Core will ignore this value and use the DB default of `10`.
+
+This is where sentinel values come in. EF Core 8 allows us to configure a specific sentinel value for a CLR type. This gives us full control over when to use (and not use) the DB default value
+
+There are two ways we can configure sentinel values.
+
+The first is via EF Configuration:
+
+```csharp
+public class Account
+{
+    public int Id { get; private set; }
+
+    // use sentinel values is to use a sentinel value that's been configured in ApplicationDbContext
+    public int Credits { get; set; } = -1;
+}
+
+public class ApplicationDbContext : DbContext
+{
+    public DbSet<Account> Accounts => Set<Account>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder
+            .UseSqlServer(DbConnectionFactory.Create("SentinelValues"));
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Account>().Property(a => a.Credits).HasDefaultValue(10).HasSentinel(-1);
+    }
+}
+```
+
+The second is to use a nullable backing field. This works without any additional EF configuration:
+
+```csharp
+public class Account
+{
+    public int Id { get; private set; }
+
+    // use a nullable backing field
+    private int? _balance;
+    public int Balance
+    {
+        get => _balance ?? 100;
+        set => _balance = value;
+    }
+}
+```
+
+## Use Cases
+
+- Inserting rows with default CLR values when the DB has a default value
+- Correct EF Core behavior when using boolean `default` and `enum` default values
+- Overriding defaults for other value types such as `int`, `DateTime`, etc.
+
+## Source Code
+
+For the past few versions of EF Core, I've been building samples of EF Core that shows each feature in isolation. My goal is to show the simplest possible way to use a new feature. I hope you find the samples in the repo useful.
+
+[github.com/danielmackay/dotnet-ef-core-samples](https://github.com/danielmackay/dotnet-ef-core-samples)
+
+## Summary
+
+This blog post delves into the latest updates in Entity Framework Core ORM (EF Core 8), emphasizing its new features and performance improvements. Key highlights include Complex Types for more expressive models, Unmapped Queries for running SQL without an ORM setup, Primitive Collections to store lists of primitives without extra tables, and support for `DateOnly` and `TimeOnly` types. EF Core 8 also enhances Bulk Updates & Deletes, offers advanced JSON Column capabilities, introduces Hierarchy IDs for efficient hierarchical data management, and implements Sentinel Values for better control over database defaults.
+
+By learning about more of the lesser known features of EF Core, you can make better use of the ORM and use the right 'tool for the job'.
+
+## Resources
+
+- [EF Core Docs | Whats New](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew)
+- [github.com/danielmackay/dotnet-ef-core-samples](https://github.com/danielmackay/dotnet-ef-core-samples)
