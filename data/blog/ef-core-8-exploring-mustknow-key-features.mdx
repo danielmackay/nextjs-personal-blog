@@ -11,6 +11,8 @@ canonicalUrl: https://www.dandoescode.com/blog/ef-core-8-exploring-must-know-key
 
 ![Banner](/static/images/ef-core-8-exploring-must-know-key-features/banner.png)
 
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
 ## Introduction
 
 EF Core 8 is the latest version of the Entity Framework Core ORM. It's a major release that brings with it a number of new features and performance enhancements. Now that EF Core has switched to an annual release cadence, we are now getting new ORM functionality at a much faster rate than ever.
@@ -51,7 +53,7 @@ public class Address
 
 We can configure the `Address` as a complex type in our `DbContext`:
 
-```csharp
+```csharp {7-9}
 public class ApplicationDbContext : DbContext
 {
     public DbSet<Contact> Contacts { get; set; } = null!;
@@ -94,7 +96,7 @@ public class UnmappedProduct
 
 We can then use this class to run a query against the DB:
 
-```csharp
+```csharp {3}
 using var db = new ApplicationDbContext();
 var allProducts = db.Database
     .SqlQuery<UnmappedProduct>($"SELECT Name FROM Products")
@@ -114,12 +116,11 @@ Primitive Collections allow us to store a list of primitive values in a column W
 
 Consider the following `Product` and `Color` classes:
 
-```csharp
+```csharp {5}
 public class Product
 {
     public int Id { get; private set; }
     public required string Name { get; init; }
-
     public List<Color> Colors { get; init; } = [];
 }
 
@@ -149,7 +150,7 @@ EF Core 8.0 introduces support for the `DateOnly` and `TimeOnly` types. These ar
 
 We don't need any extra configuration. EF Core will handle this out of the box:
 
-```csharp
+```csharp {6-7}
 public class Product
 {
     public int Id { get; set; }
@@ -171,7 +172,7 @@ Bulk updates & deletes were introduced In EF Core 7, and were a really nice addi
 
 Consider the following `ApplicationDbContext` and entities:
 
-```csharp
+```csharp {34}
 public class Product
 {
     public int Id { get; private set; }
@@ -245,7 +246,7 @@ public enum ColorCode
 
 We can configure `Product.Colors` as a JSON column in our `ApplicationDbContext`:
 
-```csharp
+```csharp {13}
 public class ApplicationDbContext : DbContext
 {
     public DbSet<Product> Products => Set<Product>();
@@ -292,7 +293,7 @@ _NOTE: You will need the CLR enabled on your SQL Server instance for this to wor
 
 Consider the following `Employee` entity:
 
-```csharp
+```csharp {4}
 public class Employee
 {
     public int Id { get; private set; }
@@ -374,7 +375,7 @@ There are two ways we can configure sentinel values.
 
 The first is via EF Configuration:
 
-```csharp
+```csharp {6,21}
 public class Account
 {
     public int Id { get; private set; }
@@ -402,7 +403,7 @@ public class ApplicationDbContext : DbContext
 
 The second is to use a nullable backing field. This works without any additional EF configuration:
 
-```csharp
+```csharp {6-10}
 public class Account
 {
     public int Id { get; private set; }
@@ -417,7 +418,7 @@ public class Account
 }
 ```
 
-## Use Cases
+Use Cases:
 
 - Inserting rows with default CLR values when the DB has a default value
 - Correct EF Core behavior when using boolean `default` and `enum` default values

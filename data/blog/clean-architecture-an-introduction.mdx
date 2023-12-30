@@ -9,6 +9,8 @@ images: ['/static/images/clean-architecture-an-introduction/clean-architecture.p
 canonicalUrl: https://www.dandoescode.com/blog/clean-architecture-an-introduction
 ---
 
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
 For a long time, I have been using the classic "N-Tier" architecture (UI Layer -> Logic Layer -> Data Layer) in most of the applications I build. I rely heavily on interfaces, and learnt a long time ago that IoC (Inversion of Control) is your friend. This architecture enabled me to build loosely coupled, testable applications, and has served me well so far. However, like many professional software engineers, I'm always on the look out as to how I can improve my architecture when designing applications.
 
 Recently, I came across [Clean Architecture](https://youtu.be/dK4Yb6-LxAk) from a presentation by Jason Taylor at a Goto conference, and have become fascinated with this architecture / pattern. It validated some of the things I had already been doing, but improved in other areas that always felt a bit clunky to me (like integrating with 3rd party services, and where the heck does validation go?).
