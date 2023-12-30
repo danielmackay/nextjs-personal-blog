@@ -170,7 +170,52 @@ Use cases:
 
 ### Enhanced Bulk Updates & Deletes
 
-Let's say you wanted to run a bulk update on a table. In EF Core 7, we could do that but were limited to a single entity. However, now in EF Core 8, we can do updates across multiple structures (however, they still need to live in the same table).
+Bulk updates & deletes were introduced In EF Core 7, and were a really nice addition to the library. However, there were some limitations. Now in EF Core 8, we can do updates across multiple structures (however, they still need to live in the same table). This allows us to use Owned Entities and Complex Types to a nicely structured domain model, but still be able to do bulk updates.
+
+Consider the following `ApplicationDbContext` and entities:
+
+```csharp
+public class Product
+{
+    public int Id { get; private set; }
+    public required string Name { get; init; }
+    public required Color Color { get; init; }
+}
+
+public class Color
+{
+    public ColorCode Code { get; init; }
+    public required string Name { get; init; }
+    public int NumInStock { get; init; }
+}
+
+public enum ColorCode
+{
+    Red = 1,
+    Green,
+    Blue,
+}
+
+public class ApplicationDbContext : DbContext
+{
+    public DbSet<Product> Products => Set<Product>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder
+            .UseSqlServer(DbConnectionFactory.Create("EnhancedBulkUpdateAndDelete"));
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Product>().OwnsOne(p => p.Color);
+    }
+}
+```
+
+Use cases:
+
+- Bulk Update and Delete on Owned Entities and Complex Types
 
 ### JSON Column Enhancements
 
@@ -198,3 +243,8 @@ TBC
 - [EF Core Docs | Value Objects Using Complex Types](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#value-objects-using-complex-types)
 - TODO: Unmapped Queries
 - [EF Core Docs | Primitive Collections](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#primitive-collections)
+- [EF Core Docs | Enhanced Bulk Updates and Deletes](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#better-executeupdate-and-executedelete)
+
+## TODO
+
+- [ ] Review all resources links
