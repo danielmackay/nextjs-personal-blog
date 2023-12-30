@@ -11,6 +11,11 @@ canonicalUrl: https://www.dandoescode.com/blog/ef-core-8-exploring-must-know-key
 
 ![Banner](/static/images/ef-core-8-exploring-must-know-key-features/banner.png)
 
+## TODO
+
+- [ ] Review all resources links
+- [ ] Summary
+
 ## Introduction
 
 EF Core 8 is the latest version of the Entity Framework Core ORM. It's a major release that brings with it a number of new features and performance enhancements. Now that EF Core has switched to an annual release cadence, we are now getting new ORM functionality at a much faster rate than ever.
@@ -219,9 +224,71 @@ Use cases:
 
 ### JSON Column Enhancements
 
-Support for JSON columns was introduced in EF Core 7. You could query and update JSON columns. But there were some limitations.
+Support for JSON columns was introduced in EF Core 7. You could query and update JSON columns. But there were some limitations. EF Core 8 adds some more advanced JSON capabilities. We can now query JSON collections of complex objects.
 
-EF Core 8 adds some more advanced JSON capabilities. Let's take a look.
+Consider the following `Product` and `Color` entities:
+
+```csharp
+public class Product
+{
+    public int Id { get; private set; }
+    public required string Name { get; init; }
+    public List<Color> Colors { get; init; } = [];
+}
+
+public class Color
+{
+    public ColorCode Code { get; init; }
+    public required string Name { get; init; }
+    public int NumInStock { get; init; }
+}
+
+public enum ColorCode
+{
+    Red = 1,
+    Green,
+    Blue,
+}
+```
+
+We can configure `Product.Colors` as a JSON column in our `ApplicationDbContext`:
+
+```csharp
+public class ApplicationDbContext : DbContext
+{
+    public DbSet<Product> Products => Set<Product>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder
+            .UseSqlServer(DbConnectionFactory.Create("EnhancedJsonColumns"));
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Product>().OwnsMany(e => e.Colors, builder => builder.ToJson());
+    }
+}
+```
+
+As `Colors` is a list of complex objects, the data in our DB table will look as follows:
+
+![Primitive Collections](/static/images/ef-core-8-exploring-must-know-key-features/json-columns.png)
+
+And we can query `Colors` as we usually would with EF Core:
+
+```csharp
+using var db = new ApplicationDbContext();
+var blackProducts = db.Products
+    .AsNoTracking()
+    .SelectMany(p => p.Colors.Where(c => c.Code == ColorCode.Black))
+    .ToList();
+```
+
+Use cases:
+
+- Use JSON columns to store complex objects/arrays
+- Removes previous limitations of JSON queries
 
 ### Hierarchy IDs
 
@@ -244,7 +311,4 @@ TBC
 - TODO: Unmapped Queries
 - [EF Core Docs | Primitive Collections](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#primitive-collections)
 - [EF Core Docs | Enhanced Bulk Updates and Deletes](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#better-executeupdate-and-executedelete)
-
-## TODO
-
-- [ ] Review all resources links
+- [EF Core Docs | Enhanced JSON Columns](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#enhancements-to-json-column-mapping)
