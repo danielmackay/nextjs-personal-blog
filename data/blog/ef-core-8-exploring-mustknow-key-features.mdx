@@ -1,0 +1,179 @@
+---
+title: EF Core 8 - Exploring Must-Know Key Features
+date: '2023-12-29'
+tags: ['entity-framework-core', 'dotnet']
+draft: false
+summary: TBC
+images: ['/static/images/ef-core-8-exploring-must-know-key-features/banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/ef-core-8-exploring-must-know-key-features
+---
+
+![Banner](/static/images/ef-core-8-exploring-must-know-key-features/banner.png)
+
+## Introduction
+
+EF Core 8 is the latest version of the Entity Framework Core ORM. It's a major release that brings with it a number of new features and performance enhancements. Now that EF Core has switched to an annual release cadence, we are now getting new ORM functionality at a much faster rate than ever.
+
+In this post, we'll take a look at some of the key features that you should know about.
+
+## New Features
+
+EF Core 8 includes 18 new features and enhancements. The full list can be found [here](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew). Let's take a look and what I think are the most important of these.
+
+### Complex Types
+
+When modeling our entities in EF, we don't have to use always use flat data structures. We can use nested data structures to group
+similar properties together and help us reason about our data.
+
+In EF Core 7, we used Owned Entities for this. These mostly worked, but had some limitations as they were using
+entities under the hood.
+
+In EF Core 8, we now have Complex Types, which serve a similar purpose, but are not entities under the hood. They more
+closely match a typical 'Value Object', that you may see in the DDD world. This allows us to create more expressive models, that we can also attach behavior to.
+
+Considering we have the following `Contact` and `Address` entities:
+
+```csharp
+public class Contact
+{
+    public int Id { get; init; }
+    public required string Name { get; init; }
+    public required Address Address { get; init; }
+}
+
+public class Address
+{
+    public required string Street { get; init; }
+    public required string City { get; init; }
+    public required string PostCode { get; init; }
+}
+```
+
+We can configure the `Address` as a complex type in our `DbContext`:
+
+```csharp
+public class ApplicationDbContext : DbContext
+{
+    public DbSet<Contact> Contacts { get; set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder
+            .Entity<Contact>()
+            .ComplexProperty(c => c.Address);
+    }
+}
+```
+
+The result in the DB is a single table with all the properties of the `Address` type:
+
+![Complex Types](/static/images/ef-core-8-exploring-must-know-key-features/complex-types.png)
+
+Use Cases:
+
+- Using value objects in DDD
+- Breaking up large entities into smaller, more logical chunks
+- Avoids some of the limitations of Owned Entities:
+- Can be either a value type of
+- Can be shard by multiple properties
+
+### Unmapped Queries
+
+Sometimes you might want to run queries against a DB you don't control, and you don't want the extra hassle of setting up an ORM. Alternatively, you may be using CQRS and have a separate read and write model. You may also want to run some SQL that is not supported by EF Core (such as common table expressions, and window functions).
+
+In these cases you can use EF Core to run unmapped queries.
+
+Consider the following `UnmappedProduct` class:
+
+```csharp
+public class UnmappedProduct
+{
+    public string Name { get; set; } = null!;
+}
+```
+
+We can then use this class to run a query against the DB:
+
+```csharp
+using var db = new ApplicationDbContext();
+var allProducts = db.Database
+    .SqlQuery<UnmappedProduct>($"SELECT Name FROM Products")
+    .ToList();
+```
+
+Use Cases:
+
+- Simple query and command scenarios that don't require entities
+- Provide 'Dapper-like' functionality for simple queries and commands
+- Increased performance for queries and commands that don't require entities
+
+### Primitive Collections
+
+Primitive Collections allow us to store a list of primitive values in a column WITHOUT having to create a separate table. EF Core will automatically do this for any primitive collections on our entities. This doesn't require any special configuration.
+
+Consider the following `Product` and `Color` classes:
+
+```csharp
+public class Product
+{
+    public int Id { get; private set; }
+    public required string Name { get; init; }
+
+    public List<Color> Colors { get; init; } = [];
+}
+
+public enum Color
+{
+    Red = 1,
+    Green,
+    Blue,
+    Yellow,
+    Orange,
+    Purple,
+    Black,
+    White,
+    Brown
+}
+```
+
+After inserting some data to the DB and inspecting the table, will see that EF Core has created a `Colors` column as follows:
+
+![Primitive Collections](/static/images/ef-core-8-exploring-must-know-key-features/primitive-collections.png)
+
+Use Cases:
+
+- Keep DB Schema clean without having to create unneeded tables for primitive collections
+
+### DateOnly & TimeOnly Support
+
+### Enhanced Bulk Updates & Deletes
+
+Let's say you wanted to run a bulk update on a table. In EF Core 7, we could do that but were limited to a single entity. However, now in EF Core 8, we can do updates across multiple structures (however, they still need to live in the same table).
+
+### JSON Column Enhancements
+
+Support for JSON columns was introduced in EF Core 7. You could query and update JSON columns. But there were some limitations.
+
+EF Core 8 adds some more advanced JSON capabilities. Let's take a look.
+
+### Hierarchy IDs
+
+### Sentinel Values
+
+## Source Code
+
+For the past few versions of EF Core, I've been building up stand alone stand-alone applications that shows off many of the lesser known features of EF Core in a simple, easy to understand way. I hope you find the samples in the repo useful.
+
+[github.com/danielmackay/dotnet-ef-core-samples](https://github.com/danielmackay/dotnet-ef-core-samples)
+
+## Summary
+
+TBC
+
+## Resources
+
+- [EF Core Docs | Whats New](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew)
+- [EF Core Docs | Value Objects Using Complex Types](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#value-objects-using-complex-types)
+- TODO: Unmapped Queries
+- [EF Core Docs | Primitive Collections](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#primitive-collections)
