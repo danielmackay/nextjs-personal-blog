@@ -1,20 +1,15 @@
 ---
 title: EF Core 8 - Exploring Must-Know Key Features
-date: '2023-12-29'
-tags: ['entity-framework-core', 'dotnet']
+date: '2023-12-30'
+tags: ['entity-framework', 'dotnet', 'dotnet-8']
 draft: false
-summary: TBC
+summary: This blog post delves into the latest updates in Entity Framework Core ORM (EF Core 8), emphasizing its new features and performance improvements. Key highlights include Complex Types for more expressive models, Unmapped Queries for running SQL without an ORM setup, Primitive Collections to store lists of primitives without extra tables, and support for `DateOnly` and `TimeOnly` types. EF Core 8 also enhances Bulk Updates & Deletes, offers advanced JSON Column capabilities, introduces Hierarchy IDs for efficient hierarchical data management, and implements Sentinel Values for better control over database defaults.
 images: ['/static/images/ef-core-8-exploring-must-know-key-features/banner.png']
 layout: PostLayout
 canonicalUrl: https://www.dandoescode.com/blog/ef-core-8-exploring-must-know-key-features
 ---
 
 ![Banner](/static/images/ef-core-8-exploring-must-know-key-features/banner.png)
-
-## TODO
-
-- [ ] Review all resources links
-- [ ] Summary
 
 ## Introduction
 
@@ -372,6 +367,63 @@ Use Cases:
 
 ### Sentinel Values
 
+EF Core can configure SQL Server to use Database defaults. For this to work, EF needs to know when NOT to send a value to the DB so that the DB can use the default value. It does this by using the `default` value of the .NET CLR type This works well for reference types, but not value types.
+
+However, in some cases the CLR default value is a value valid to insert. For example, when creating an account we may want to default credit property to `10`. This means that we're not able to create an account with the default CLR value of `0`, as EF Core will ignore this value and use the DB default of `10`.
+
+This is where sentinel values come in. EF Core 8 allows us to configure a specific sentinel value for a CLR type. This gives us full control over when to use (and not use) the DB default value
+
+There are two ways we can configure sentinel values. The first is EF Configuration:
+
+```csharp
+public class Account
+{
+    public int Id { get; private set; }
+
+    // use sentinel values is to use a sentinel value that's been configured in ApplicationDbContext
+    public int Credits { get; set; } = -1;
+}
+
+public class ApplicationDbContext : DbContext
+{
+    public DbSet<Account> Accounts => Set<Account>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder
+            .UseSqlServer(DbConnectionFactory.Create("SentinelValues"));
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Account>().Property(a => a.Credits).HasDefaultValue(10).HasSentinel(-1);
+    }
+}
+```
+
+The second is to use a nullable backing field. This works without any additional EF configuration:
+
+```csharp
+public class Account
+{
+    public int Id { get; private set; }
+
+    // use a nullable backing field
+    private int? _balance;
+    public int Balance
+    {
+        get => _balance ?? 100;
+        set => _balance = value;
+    }
+}
+```
+
+## Use Cases
+
+- Inserting rows with default CLR values when the DB has a default value
+- Correct EF Core behavior when using boolean `default` and `enum` default values
+- Overriding defaults for other value types such as `int`, `DateTime`, etc.
+
 ## Source Code
 
 For the past few versions of EF Core, I've been building up stand alone stand-alone applications that shows off many of the lesser known features of EF Core in a simple, easy to understand way. I hope you find the samples in the repo useful.
@@ -380,14 +432,11 @@ For the past few versions of EF Core, I've been building up stand alone stand-al
 
 ## Summary
 
-TBC
+This blog post delves into the latest updates in Entity Framework Core ORM (EF Core 8), emphasizing its new features and performance improvements. Key highlights include Complex Types for more expressive models, Unmapped Queries for running SQL without an ORM setup, Primitive Collections to store lists of primitives without extra tables, and support for `DateOnly` and `TimeOnly` types. EF Core 8 also enhances Bulk Updates & Deletes, offers advanced JSON Column capabilities, introduces Hierarchy IDs for efficient hierarchical data management, and implements Sentinel Values for better control over database defaults.
+
+By learning about more of the lesser known features of EF Core, you can make better use of the ORM and use the right 'tool for the job'.
 
 ## Resources
 
 - [EF Core Docs | Whats New](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew)
-- [EF Core Docs | Value Objects Using Complex Types](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#value-objects-using-complex-types)
-- TODO: Unmapped Queries
-- [EF Core Docs | Primitive Collections](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#primitive-collections)
-- [EF Core Docs | Enhanced Bulk Updates and Deletes](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#better-executeupdate-and-executedelete)
-- [EF Core Docs | Enhanced JSON Columns](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#enhancements-to-json-column-mapping)
-- [EF Core Docs | Hierarchy IDs](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-8.0/whatsnew#hierarchyid-in-net-and-ef-core)
+- [github.com/danielmackay/dotnet-ef-core-samples](https://github.com/danielmackay/dotnet-ef-core-samples)
