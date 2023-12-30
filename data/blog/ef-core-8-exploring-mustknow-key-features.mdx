@@ -26,10 +26,9 @@ EF Core 8 includes 18 new features and enhancements. The full list can be found 
 When modeling our entities in EF, we don't have to use always use flat data structures. We can use nested data structures to group
 similar properties together and help us reason about our data.
 
-In EF Core 7, we used Owned Entities for this. These mostly worked, but had some limitations as they were using
-entities under the hood.
+In EF Core 7, we used Owned Entities for this. These mostly worked, but had some limitations due to the use of entities under the hood.
 
-In EF Core 8, we now have Complex Types, which serve a similar purpose, but are not entities under the hood. They more
+In EF Core 8, we now have Complex Types, which serve a similar purpose, but do not use entities under the hood. They more
 closely match a typical 'Value Object', that you may see in the DDD world. This allows us to create more expressive models, that we can also attach behavior to.
 
 Considering we have the following `Contact` and `Address` entities:
@@ -75,14 +74,14 @@ Use Cases:
 - Using value objects in DDD
 - Breaking up large entities into smaller, more logical chunks
 - Avoids some of the limitations of Owned Entities:
-- Can be either a value type of
-- Can be shard by multiple properties
+  - Can be either a value type or reference type
+  - Can be shared by properties across multiple entities
 
 ### Unmapped Queries
 
-Sometimes you might want to run queries against a DB you don't control, and you don't want the extra hassle of setting up an ORM. Alternatively, you may be using CQRS and have a separate read and write model. You may also want to run some SQL that is not supported by EF Core (such as common table expressions, and window functions).
+Sometimes you might want to run queries against a DB you don't control, and you don't want the extra hassle of setting up a full ORM. Alternatively, you may be using CQRS and have a separate read and write model. You may also want to run some SQL that is not supported by EF Core (such as common table expressions, and window functions).
 
-In these cases you can use EF Core to run unmapped queries.
+In these cases you can use EF Core to execute unmapped queries.
 
 Consider the following `UnmappedProduct` class:
 
@@ -104,9 +103,10 @@ var allProducts = db.Database
 
 Use Cases:
 
-- Simple query and command scenarios that don't require entities
+- Simple query and command scenarios that don't require entities to be registered with EF Core
 - Provide 'Dapper-like' functionality for simple queries and commands
 - Increased performance for queries and commands that don't require entities
+- Allows us to easily have separate read and write models
 
 ### Primitive Collections
 
@@ -127,19 +127,15 @@ public enum Color
 {
     Red = 1,
     Green,
-    Blue,
-    Yellow,
-    Orange,
-    Purple,
-    Black,
-    White,
-    Brown
+    Blue
 }
 ```
 
 After inserting some data to the DB and inspecting the table, will see that EF Core has created a `Colors` column as follows:
 
 ![Primitive Collections](/static/images/ef-core-8-exploring-must-know-key-features/primitive-collections.png)
+
+We can still use EF to query this data as we usually would.
 
 Use Cases:
 
@@ -166,11 +162,12 @@ public class Product
 
 Use cases:
 
-- Storing dates and times without a time zone
+- Storing only dates
+- Storing only time
 
 ### Enhanced Bulk Updates & Deletes
 
-Bulk updates & deletes were introduced In EF Core 7, and were a really nice addition to the library. However, there were some limitations. Now in EF Core 8, we can do updates across multiple structures (however, they still need to live in the same table). This allows us to use Owned Entities and Complex Types to a nicely structured domain model, but still be able to do bulk updates.
+Bulk updates & deletes were introduced In EF Core 7, and were a really nice addition to the library. However, there were some limitations. Now in EF Core 8, we can do updates across multiple structures (however, they still need to live in the same table). This allows us to use Owned Entities and Complex Types to have a nicely structured domain model, but still be able to do bulk updates.
 
 Consider the following `ApplicationDbContext` and entities:
 
@@ -193,7 +190,7 @@ public enum ColorCode
 {
     Red = 1,
     Green,
-    Blue,
+    Blue
 }
 
 public class ApplicationDbContext : DbContext
@@ -242,7 +239,7 @@ public enum ColorCode
 {
     Red = 1,
     Green,
-    Blue,
+    Blue
 }
 ```
 
@@ -367,13 +364,15 @@ Use Cases:
 
 ### Sentinel Values
 
-EF Core can configure SQL Server to use Database defaults. For this to work, EF needs to know when NOT to send a value to the DB so that the DB can use the default value. It does this by using the `default` value of the .NET CLR type This works well for reference types, but not value types.
+EF Core can configure SQL Server to use Database defaults. For this to work, EF needs to know when NOT to send a value to the DB so that the DB can use the default value. It does this by using the `default` value of the .NET CLR type This works well for reference types, but not so well for value types.
 
-However, in some cases the CLR default value is a value valid to insert. For example, when creating an account we may want to default credit property to `10`. This means that we're not able to create an account with the default CLR value of `0`, as EF Core will ignore this value and use the DB default of `10`.
+In some cases the CLR default value is a value valid to insert. For example, when creating an account we may want to default credit property to `10`. This means that we're not able to create an account with the default CLR value of `0`, as EF Core will ignore this value and use the DB default of `10`.
 
 This is where sentinel values come in. EF Core 8 allows us to configure a specific sentinel value for a CLR type. This gives us full control over when to use (and not use) the DB default value
 
-There are two ways we can configure sentinel values. The first is EF Configuration:
+There are two ways we can configure sentinel values.
+
+The first is via EF Configuration:
 
 ```csharp
 public class Account
@@ -426,7 +425,7 @@ public class Account
 
 ## Source Code
 
-For the past few versions of EF Core, I've been building up stand alone stand-alone applications that shows off many of the lesser known features of EF Core in a simple, easy to understand way. I hope you find the samples in the repo useful.
+For the past few versions of EF Core, I've been building samples of EF Core that shows each feature in isolation. My goal is to show the simplest possible way to use a new feature. I hope you find the samples in the repo useful.
 
 [github.com/danielmackay/dotnet-ef-core-samples](https://github.com/danielmackay/dotnet-ef-core-samples)
 
