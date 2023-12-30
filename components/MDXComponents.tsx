@@ -5,6 +5,10 @@ import type { MDXComponents } from 'mdx/types'
 import Image from './Image'
 import CustomLink from './Link'
 import TableWrapper from './TableWrapper'
+import BicepSeriesHeader from '@/components/bicep/BicepSeriesHeader'
+import BicepSeriesResources from '@/components/bicep/BicepSeriesResources'
+import BitBucketPipelinesSeriesHeader from '@/components/bit-bucket/BitBucketPipelinesSeriesHeader'
+import BitBucketPipelinesSeriesResources from '@/components/bit-bucket/BitBucketPipelinesSeriesResources'
 
 export const components: MDXComponents = {
   Image,
@@ -13,4 +17,8 @@ export const components: MDXComponents = {
   pre: Pre,
   table: TableWrapper,
   BlogNewsletterForm,
+  BicepSeriesHeader,
+  BicepSeriesResources,
+  BitBucketPipelinesSeriesHeader,
+  BitBucketPipelinesSeriesResources,
 }
