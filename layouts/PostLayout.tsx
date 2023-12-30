@@ -52,7 +52,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
               </dl>
               <div>
                 <PageTitle>{title}</PageTitle>
-                <span className="inline-block mt-2 text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
+                <span className="mt-2 inline-block text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
                   {readingTime.text}
                 </span>
               </div>
