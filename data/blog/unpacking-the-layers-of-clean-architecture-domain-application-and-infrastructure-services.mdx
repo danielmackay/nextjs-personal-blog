@@ -11,6 +11,8 @@ canonicalUrl: https://www.dandoescode.com/blog/powershell-scripting-introduction
 
 ![Powershell](/static/images/clean-architecture-services/banner.png)
 
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
 Recently, I’ve noticed some confusion relating to Clean Architecture and the concept of ‘services’. In popular Clean Architecture templates such as the [SSW CA Template](https://github.com/SSWConsulting/SSW.CleanArchitecture) and [Jason Taylor’s CA template](https://github.com/jasontaylordev/CleanArchitecture), there is a single service called `DateTimeService` in the `Infrastructure` project. This can mistakenly lead developers to think this is where ALL services should live (which is not the case).
 
 This post will use the term ‘service’, but other terms like ‘manager’, ‘helper’, or ‘utilities’ are equally applicable.

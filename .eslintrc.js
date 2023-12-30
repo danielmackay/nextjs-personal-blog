@@ -17,6 +17,10 @@ module.exports = {
     'next',
     'next/core-web-vitals',
   ],
+  parserOptions: {
+    project: true,
+    tsconfigRootDir: __dirname,
+  },
   rules: {
     'prettier/prettier': 'error',
     'react/react-in-jsx-scope': 'off',
@@ -29,7 +33,7 @@ module.exports = {
       },
     ],
     'react/prop-types': 0,
-    'no-unused-vars': 0,
+    '@typescript-eslint/no-unused-vars': 0,
     'react/no-unescaped-entities': 0,
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-var-requires': 'off',

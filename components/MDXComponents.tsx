@@ -1,51 +1,24 @@
-/* eslint-disable react/display-name */
-import React from 'react'
-import { useMDXComponent } from 'next-contentlayer/hooks'
-import { ComponentMap } from 'mdx-bundler/client'
-import { coreContent } from '@/lib/utils/contentlayer'
+import TOCInline from 'pliny/ui/TOCInline'
+import Pre from 'pliny/ui/Pre'
+import BlogNewsletterForm from 'pliny/ui/BlogNewsletterForm'
+import type { MDXComponents } from 'mdx/types'
 import Image from './Image'
 import CustomLink from './Link'
-import TOCInline from './TOCInline'
-import Pre from './Pre'
-import { BlogNewsletterForm } from './NewsletterForm'
-import type { Blog, Authors } from 'contentlayer/generated'
-import BicepSeriesHeader from './bicep/BicepSeriesHeader'
-import BicepSeriesResources from './bicep/BicepSeriesResources'
-import BitBucketPipelinesSeriesHeader from './bit-bucket/BitBucketPipelinesSeriesHeader'
-import BitBucketPipelinesSeriesResources from './bit-bucket/BitBucketPipelinesSeriesResources'
+import TableWrapper from './TableWrapper'
+import BicepSeriesHeader from '@/components/bicep/BicepSeriesHeader'
+import BicepSeriesResources from '@/components/bicep/BicepSeriesResources'
+import BitBucketPipelinesSeriesHeader from '@/components/bit-bucket/BitBucketPipelinesSeriesHeader'
+import BitBucketPipelinesSeriesResources from '@/components/bit-bucket/BitBucketPipelinesSeriesResources'
 
-interface MDXLayout {
-  layout: string
-  content: Blog | Authors
-  [key: string]: unknown
-}
-
-interface Wrapper {
-  layout: string
-  [key: string]: unknown
-}
-
-const Wrapper = ({ layout, content, ...rest }: MDXLayout) => {
-  const Layout = require(`../layouts/${layout}`).default
-  return <Layout content={content} {...rest} />
-}
-
-export const MDXComponents: ComponentMap = {
+export const components: MDXComponents = {
   Image,
   TOCInline,
   a: CustomLink,
   pre: Pre,
-  wrapper: Wrapper,
+  table: TableWrapper,
   BlogNewsletterForm,
   BicepSeriesHeader,
   BicepSeriesResources,
   BitBucketPipelinesSeriesHeader,
   BitBucketPipelinesSeriesResources,
-}
-
-export const MDXLayoutRenderer = ({ layout, content, ...rest }: MDXLayout) => {
-  const MDXLayout = useMDXComponent(content.body.code)
-  const mainContent = coreContent(content)
-
-  return <MDXLayout layout={layout} content={mainContent} components={MDXComponents} {...rest} />
 }
