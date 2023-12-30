@@ -147,6 +147,27 @@ Use Cases:
 
 ### DateOnly & TimeOnly Support
 
+In previous versions of EF Core if we wanted to store either a date or time the only option we had was to use `DateTime` in our models. This left us with messy code that had to constantly ignore the date or time component of the `DateTime` object.
+
+EF Core 8.0 introduces support for the `DateOnly` and `TimeOnly` types. These are value types that represent a date or time without a time zone. They are useful for storing dates and times without the overhead of a full `DateTime` object.
+
+We don't need any extra configuration. EF Core will handle this out of the box:
+
+```csharp
+public class Product
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public bool IsDeleted { get; set; }
+    public DateOnly DateCreated { get; set; }
+    public TimeOnly TimeCreated { get; set; }
+}
+```
+
+Use cases:
+
+- Storing dates and times without a time zone
+
 ### Enhanced Bulk Updates & Deletes
 
 Let's say you wanted to run a bulk update on a table. In EF Core 7, we could do that but were limited to a single entity. However, now in EF Core 8, we can do updates across multiple structures (however, they still need to live in the same table).
