@@ -7,13 +7,15 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 // You might need to insert additional domains in script-src if you are using external services
 const ContentSecurityPolicy = `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline' giscus.app analytics.umami.is;
-  style-src 'self' 'unsafe-inline';
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.google-analytics.com https://www.googletagmanager.com https://vercel.live giscus.app;
+  style-src 'self' 'unsafe-inline' giscus.app;
   img-src * blob: data:;
-  media-src *.s3.amazonaws.com;
+  media-src 'none';
   connect-src *;
   font-src 'self';
-  frame-src giscus.app
+  frame-src https://vercel.live giscus.app;
+  prefetch-src 'self';
+  frame-ancestors 'self' giscus.app
 `
 
 const securityHeaders = [
@@ -130,7 +132,7 @@ module.exports = () => {
           source: '/:path/index.xml',
           destination: '/:path/feed.xml',
           permanent: true,
-        }
+        },
       ]
     },
   })
