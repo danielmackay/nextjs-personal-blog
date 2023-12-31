@@ -56,6 +56,12 @@ yarn
 
 ## Development
 
+If you're on windows you'll first need to run the following command in PowerShell:
+
+```bash
+$env:PWD = Get-Location
+```
+
 First, run the development server:
 
 ```bash
@@ -138,12 +144,6 @@ layout: PostLayout
 canonicalUrl: https://tailwind-nextjs-starter-blog.vercel.app/blog/introducing-tailwind-nextjs-starter-blog
 ---
 ```
-
-## Frequently Asked Questions
-
-- [How can I add a custom MDX component?](/faq/custom-mdx-component.md)
-- [How can I customize the `kbar` search?](/faq/customize-kbar-search.md)
-- [How do I deploy on Github pages?](/faq/github-pages-deployment.md)
 
 ## License
 
