@@ -3,13 +3,13 @@ title: Azure SQL Databases - Deploying Updates with EF Core and GitHub
 date: '2024-01-26'
 tags: ['entity-framework', 'azure', 'github', 'devops', 'azure-cli']
 draft: false
-summary:
-images: ['/static/images/ef-core-8-exploring-must-know-key-features/banner.png']
+summary: In this blog post, we'll look at the challenge of whitelisting IP addresses when executing EF Core Migration Bundles from a GitHub Workflow.  We'll looked at several options and explored the pros and cons of each.  In particular, how to deal with the challenge of dealing with the possible ~4000 IP ranges that GitHub Runners can use.
+images: ['/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/banner.png']
 layout: PostLayout
-canonicalUrl: https://www.dandoescode.com/blog/ef-core-8-exploring-must-know-key-features
+canonicalUrl: https://www.dandoescode.com/blog/azure-sql-databases-deploying-updates-with-ef-core-and-github
 ---
 
-![Banner](/static/images/ef-core-8-exploring-must-know-key-features/banner.png)
+![Banner](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/banner.png)
 
 <TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
 
@@ -95,7 +95,7 @@ public partial class Initial : Migration
 
 Next, we need an Azure SQL Server and Database.  I've created a new Azure SQL Server and Database using the Azure Portal.  I've also created a new user and password for the database.
 
-![Azure SQL DB](/static/images/github/azure-resources.png)
+![Azure SQL DB](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/azure-resources.png)
 
 I've also got a basic GitHub Workflow setup that builds the application.
 
@@ -148,13 +148,13 @@ In this project I am using a .NET Tool Manifest file.  This allows me to specify
 
 Before we can run this, we need to add the `CONNECTION_STRING` secret to our GitHub repository.  This is done in the repository settings under `Secrets`.
 
-![GitHub Secrets](/static/images/github/repo-secret.png)
+![GitHub Secrets](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/repo-secret.png)
 
 Now let's try running our workflow and see what happens.
 
 BOOM! 💥
 
-![GitHub Workflow Error](/static/images/github/workflow-error.png)
+![GitHub Workflow Error](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/workflow-error.png)
 
 Due to our Azure SQL DB having a firewall, we need to add the GitHub Actions IP address to the firewall.  All other IP addresses will be denied access (this is a good thing).
 
@@ -166,7 +166,7 @@ We were so, close yet so far!  How can we get around the IP address issues?  Let
 
 The first option is to manually update the firewall in the Azure Portal.
 
-![Azure Firewall](/static/images/github/azure-networking.png)
+![Azure Firewall](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/azure-networking.png)
 
 This is a simple process, but it is not ideal.  This might work for a short amount of time, but considering the GitHub Workflow Runners execute on cloud infrastructure, the IP address will change over time.  This means we would need to manually update the firewall every time the IP address changes.
 
@@ -200,7 +200,7 @@ Now, this would work, but it has a few issues:
 - ❌ Ideally we would also clean up these IP ranges after the deployment so that's additional build minutes
 - ❌ The IP addresses could change over time.  We can't run this script once off.  It would need to be run regularly, and possibly every workflow execution.  This would massively slow down our workflows and end up costing us a lot of precious build minutes (i.e. money 🤑).
 
-### Option 3 - Inspect Workflow Runner and Add IP Address
+### Option 3 - Inspect Workflow Runner and Add IP Address (recommended)
 
 The next option is to inspect the GitHub Workflow Runner and dynamically add the IP address to the firewall.  This is similar to the previous option, but instead of adding all the IP addresses, we only add the IP address of the current runner.  This also makes it easier to clean up the firewall rules after the deployment.  Let's give it a try.
 
@@ -255,7 +255,7 @@ For this to work we need to add a new secret to our repository with the service 
 
 When finished you will now have two secrets in your repository.
 
-![GitHub Secrets](/static/images/github/repo-secret-2.png)
+![GitHub Secrets](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/repo-secret-2.png)
 
 Now that we have our service principle and can login, we can add the firewall rule.  This can be done via:
 
@@ -338,7 +338,7 @@ jobs:
 
 And with all this in place, our workflow runs successfully! 🥳
 
-![workflow-success](/static/images/github/workflow-success.png)
+![workflow-success](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/workflow-success.png)
 
 ## Source Code
 
@@ -346,7 +346,9 @@ If you'd like to see the full solution used in the post, you can find it on GitH
 
 ## Summary
 
+In this blog post, we've looked at the challenge of whitelisting IP addresses when executing EF Core Migration Bundles from a GitHub Workflow.  We looked at several options and explored the pros and cons of each.  We landed on our recommended option of inspecting the GitHub Workflow Runner and dynamically adding the IP address to the firewall and removing it again after the deployment.  We also looked at how to set this up in a secure way by creating a service principal with the minimum permissions required.
 
+I hope this information helps you in your journey to deploying EF Core Migration Bundles from GitHub Workflows.  If you have any questions or comments, please leave them below.
 
 ## Resources
 
