@@ -1,9 +1,9 @@
 ---
 title: Azure SQL Databases - Deploying Updates with EF Core and GitHub
-date: '2024-01-26'
+date: '2024-01-29'
 tags: ['entity-framework', 'azure', 'github', 'devops', 'azure-cli']
 draft: false
-summary: In this blog post, we'll look at the challenge of whitelisting IP addresses when executing EF Core Migration Bundles from a GitHub Workflow.  We'll looked at several options and explored the pros and cons of each.  In particular, how to deal with the challenge of dealing with the possible ~4000 IP ranges that GitHub Runners can use.
+summary: In this blog post, we'll look at the challenge of whitelisting IP addresses when executing EF Core Migration Bundles from a GitHub Workflow.  We'll look at several options and explore the pros and cons of each.  In particular, how to deal with the challenge of dealing with the possible ~4000 IP ranges that GitHub Runners can use.
 images: ['/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/banner.png']
 layout: PostLayout
 canonicalUrl: https://www.dandoescode.com/blog/azure-sql-databases-deploying-updates-with-ef-core-and-github
@@ -15,9 +15,9 @@ canonicalUrl: https://www.dandoescode.com/blog/azure-sql-databases-deploying-upd
 
 ## Introduction
 
-Recently, a colleague and I were working on a DB migration process in an internal project.  The easy option here is to get the application to run DB migrations during start-up.  But this adds to start-up time and can cause issues when scaling out to multiple processes.  Instead, we wanted to deploy DB schema changes during the CICD GitHub Workflow.  This is considering a good practice in the devops world, as the DB migration only happens once on deployment, and start-up times and scale-out are not affected.
+Recently, a colleague and I were working on a DB migration process with EF Core on an internal project.  The easy option here is to get the application to run DB migrations during start-up.  But this adds to start-up time and can cause issues when scaling out to multiple processes.  Instead, we wanted to deploy DB schema changes during the CICD GitHub Workflow.  This is a good practice in the devops world, as the DB migration only happens once on deployment, and application start-up times and scale-out are not affected.
 
-However, there were a few issues we ran into along the way.  This post will cover the issues we ran into, and explore several possible solutions.
+However, there were a few issues we ran into along the way.  This post will cover these issues, and explore several possible solutions.
 
 Thanks to [Matt Wicks](https://ssw.com.au/people/matt-wicks/) and [Gordon Beaming](https://ssw.com.au/people/gordon-beaming/) their helpful input on this problem.
 
@@ -35,10 +35,10 @@ To follow along with this post, you will need:
 The process we should follow for this is:
 
 1. Workflow is triggered on push to `main`
-2. Build and Test
-3. Generate EF Core Migration Bundle
-4. Deploy Migration Bundle to Azure SQL Database
-5. Deploy Application to Azure (not covered in this article)
+2. Build (and ideally Test)
+3. Generate an EF Core Migration Bundle
+4. Deploy the Migration Bundle to an Azure SQL Database
+5. Deploy the Application to Azure (not covered in this article)
 
 ## Setup
 
@@ -156,11 +156,11 @@ BOOM! 💥
 
 ![GitHub Workflow Error](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/workflow-error.png)
 
-Due to our Azure SQL DB having a firewall, we need to add the GitHub Actions IP address to the firewall.  All other IP addresses will be denied access (this is a good thing).
+Due to our Azure SQL DB having a firewall, we need to add a rule to allow the GitHub Runner IP address though the firewall.  All other IP addresses will be denied access (this is a good thing).
 
 ## Options
 
-We were so, close yet so far!  How can we get around the IP address issues?  Let's explore a few options.
+We were so close yet so far!  How can we get around the IP address issues?  Let's explore a few options.
 
 ### Option 1 - Manually Update in Azure
 
@@ -168,9 +168,9 @@ The first option is to manually update the firewall in the Azure Portal.
 
 ![Azure Firewall](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/azure-networking.png)
 
-This is a simple process, but it is not ideal.  This might work for a short amount of time, but considering the GitHub Workflow Runners execute on cloud infrastructure, the IP address will change over time.  This means we would need to manually update the firewall every time the IP address changes.
+This is a simple process, but not ideal.  This might work for a short amount of time, but considering the GitHub Workflow Runners execute on cloud infrastructure, the IP address will change over time.  This means we would need to manually update the firewall every time the IP address changes.
 
-### Option 2 - Add GitHub IPs to Firewall
+### Option 2 - Allow All GitHub IPs through the Firewall
 
 OK, so let's try to add all the GitHub IP's to the firewall.  GitHub expose all IPs they used via their 'meta' endpoint: https://api.github.com/meta.  We can use this to get a list of all the IPs and add them to the firewall.
 
@@ -194,13 +194,13 @@ foreach ($ip in $response.hooks) {
 }
 ```
 
-Now, this would work, but it has a few issues:
+Now in theory, this would work, but there are a few issues:
 
-- ❌ There are 4000 IP ranges in the list!  These would take a really long time to add to azure
-- ❌ Ideally we would also clean up these IP ranges after the deployment so that's additional build minutes
+- ❌ There are 4000 IP ranges in the list!  These would take a really long time to add to Azure
+- ❌ Ideally we would also clean up these IP ranges after the deployment so that's another really long time we need to wait.
 - ❌ The IP addresses could change over time.  We can't run this script once off.  It would need to be run regularly, and possibly every workflow execution.  This would massively slow down our workflows and end up costing us a lot of precious build minutes (i.e. money 🤑).
 
-### Option 3 - Inspect Workflow Runner and Add IP Address (recommended)
+### Option 3 - Inspect Workflow Runner and Add the Current IP Address (recommended)
 
 The next option is to inspect the GitHub Workflow Runner and dynamically add the IP address to the firewall.  This is similar to the previous option, but instead of adding all the IP addresses, we only add the IP address of the current runner.  This also makes it easier to clean up the firewall rules after the deployment.  Let's give it a try.
 
@@ -278,7 +278,7 @@ And of course, to be a good citizen, we should clean up the firewall rule after 
     RESOURCE_GROUP: <Your Resource Group>
 ```
 
-With all these changes in place our complete workflow looks like:
+With all these changes in place the complete workflow looks like:
 
 ```yaml
 name: .NET
@@ -336,7 +336,7 @@ jobs:
         RESOURCE_GROUP: rg-dandoescode-azure-db-github-ef-bundles-dev
 ```
 
-And with all this in place, our workflow runs successfully! 🥳
+And if we take a look at GitHub, we can see our workflow running successfully! 🥳
 
 ![workflow-success](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/workflow-success.png)
 
