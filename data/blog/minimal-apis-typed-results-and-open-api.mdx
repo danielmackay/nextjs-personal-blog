@@ -1,15 +1,15 @@
 ---
 title: Minimal APIs - Typed Results and Open API Specification
 date: '2024-03-16'
-tags: ['']
+tags: ['dotnet', 'dotnet-8', 'api', 'openapi', 'aspnetcore', 'result-pattern']
 draft: false
 summary:
-images: ['/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/banner.png']
+images: ['/static/images/minimal-apis-typed-results-and-open-api/banner.png']
 layout: PostLayout
-canonicalUrl: https://www.dandoescode.com/blog/azure-sql-databases-deploying-updates-with-ef-core-and-github
+canonicalUrl: https://www.dandoescode.com/blog/minimal-apis-typed-results-and-open-api
 ---
 
-![Banner](/static/images/azure-sql-databases-deploying-updates-with-ef-core-and-github/banner.png)
+![Banner](/static/images/minimal-apis-typed-results-and-open-api/banner.png)
 
 <TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
 
@@ -87,7 +87,7 @@ app.Run();
 ```
 
 After running the application we can see our swagger UI that has been generated from our OAS.  It shows the `CreateHero` endpoint, and the `Hero` model, and returns the correct status code.
-![basic api](/static/images/minimal-apis-and-open-api/image1.png)
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image1.png)
 
 The next options will be variations on this basic API.
 
@@ -109,7 +109,7 @@ app.MapPost("/heroes", (Hero hero, HeroService service) =>
 
 We can see here our API is returning a 201, but something strange is happening.  It's reporting the 201 as 'undocumented', and is still reporting a 200 can be returned (which is incorrect).
 
-![basic api](/static/images/minimal-apis-and-open-api/image2.png)
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image2.png)
 
 We can fix this up by adding extra metadata to our endpoint.
 
@@ -126,16 +126,13 @@ app.MapPost("/heroes", (Hero hero, HeroService service) =>
 
 If we hit our API again we can see the 201 is now documented correctly.
 
-![basic api](/static/images/minimal-apis-and-open-api/image3.png)
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image3.png)
 
 ## Option 3 - Handling Global Middleware
 
 What if we want to add a global middleware to our API?  For example, we might want to add a middleware to catch unhandled exceptions, and return a 500 Internal Server Error.  Another example is global catching of validation exceptions where we'll want to return a 400 Bad Request.  This approach is very common in many Clean Architecture templates.
 
 For this to work we first need to add validation to our `HeroService`:
-
-
-
 
 ```csharp
     public void Add(Hero hero)
@@ -231,7 +228,7 @@ app.Run();
 ```
 If we send a request with an empty `Name` or `Power` we can see our global validation handler is working correctly.  We can see a 400 Bad Request is returned, and the error message is correctly documented.
 
-![basic api](/static/images/minimal-apis-and-open-api/image3.png)
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image3.png)
 
 ### Using Exceptions as Flow Control
 
@@ -243,7 +240,7 @@ The problem with this approach is that we're using exceptions as flow control.  
 
 David Fowler, a principal architect at Microsoft, has said:
 
-![basic api](/static/images/minimal-apis-and-open-api/fowler_comment.png)
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/fowler_comment.png)
 
 There are several problems with using exceptions as flow control:
 
@@ -256,20 +253,115 @@ We'll take a look at addressing this in Option 6.
 
 ## Option 4 - Typed Results
 
-Improved version of Option 1
+[TypedResults](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/responses?view=aspnetcore-8.0#typedresults-vs-results) are a new feature in .NET 8.  They provide two main advantages:
+
+1. Return strongly-typed results which help with readability and unit testing
+2. Automatically provide OAS response meta-data
+
+Let's re-visit Option 1 and see how we can use Typed Results to improve our API.
+
+```csharp
+app.MapPost("/heroes", (Hero hero, HeroService service) =>
+    {
+        service.Add(hero);
+        return TypedResults.Created();
+    })
+    .WithName("CreateHero")
+    .WithOpenApi();
+```
+
+On first glance this might work the same, but we've been able to remove the `Produces()` function which manually added OAS metadata.  This is because the `TypedResults` automatically provides the correct OAS metadata for us.
 
 ## Option 5 - Multiple Typed Results
 
+OK, so what if we want to return multiple status codes from our API?
+
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image5.png)
+
+We get an error, as the compiler is not able to determine what the return type of the function should be.  We can fix this as follows:
+
+```csharp
+// 👇 updated
+app.MapPost("/heroes", Results<BadRequest<string>, Created>(Hero hero, HeroService service) =>
+// 👆 updated
+    {
+        if (string.IsNullOrWhiteSpace(hero.Name))
+            return TypedResults.BadRequest("Name is required");
+
+        service.Add(hero);
+
+        return TypedResults.Created();
+    })
+    .WithName("CreateHero")
+    .WithOpenApi();
+```
+The added `Results<T>` type allows us to specify the return type of the function.  We can see our OAS is now correctly documented.
+
+Another added bonus of `TypedResults` is that we get a degree of type safety in our APIs.  For example:
+
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image6.png)
+
+In this API we can see we're returning a 200 OK code, which doesn't match a 201 Created which our function is advertising. The compiler can detect this and will throw an error.  Nice! 😎
+
+Now you might have noticed we're not throwing a `ValidationException` anymore.  Excellent!  No more exceptions for flow control, which has all the disadvantages discussed above.
+
+We're getting close to a good solution here, but I'm not happy that we're now adding validation logic directly into our API.  Let's see how we can fix this.
+
 ## Option 6 - Typed Results + Result Pattern
+
+We need a way to validate within `HeroService` and communicate this `result` to the caller WITHOUT throwing exceptions.  We can do this with the Result pattern. The Result pattern is a way of returning a result from a function, which can be either a success or a failure.  This is a common pattern in functional programming languages, and is becoming more popular in C#.
+
+There are a few popular libraries that provide the Result pattern.  [ErrorOr](https://github.com/amantinband/error-or) is a popular choice, but we'll use Ardalis's [Result](https://github.com/ardalis/Result) library.
+
+After adding the `Ardalis.Result` NuGet package, we can re-write our `HeroService` to use the Result pattern:
+
+```csharp
+public Result Add(Hero hero)
+{
+    if (string.IsNullOrWhiteSpace(hero.Name))
+        return Result.Invalid(new ValidationError("Name is required"));
+
+    if (string.IsNullOrWhiteSpace(hero.Power))
+        return Result.Invalid(new ValidationError("Power is required"));
+
+    _heroes.Add(hero);
+
+    return Result.Success();
+}
+```
+
+To consume the result in our API we'll need to make the following changes:
+
+```csharp
+app.MapPost("/heroes", Results<ValidationProblem, Created>(Hero hero, HeroService service) =>
+    {
+        var result = service.Add(hero);
+        if (result.IsInvalid())
+            return TypedResultsExt.ValidationProblem(result);
+
+        return TypedResults.Created();
+    })
+    .WithName("CreateHero")
+    .WithOpenApi();
+```
+
+Finally, we've arrived at our ultimate solution!  We have type safe APIs, with no exceptions being used for flow control. 😍
 
 ## Source Code
 
-TBC
+Find the the source code for all examples on GitHub: [github.com/danielmackay/dandoescode-minimal-api-typed-results](https://github.com/danielmackay/dandoescode-minimal-api-typed-results)
 
 ## Summary
 
-TBC
+As we've journeyed through the realm of enhancing our .NET 8 Minimal APIs with Open API integration, we've explored various strategies from the basic to the advanced, all aimed at making our APIs more user-friendly and robust. Starting with the simple addition of Swagger for documenting our superhero-themed API, we ventured into customizing status codes, employing global middleware for error handling, and finally embracing the power of Typed Results and the Result pattern to refine our API design.
+
+By methodically advancing through each option, we've demonstrated how to move from a straightforward implementation to a sophisticated approach that not only improves readability and testability but also aligns with best practices by avoiding exceptions as flow control. The transition from manual OAS metadata management to leveraging Typed Results illustrates a significant improvement in developer experience, ensuring our API documentation is both accurate and easier to maintain.
+
+The exploration of the Result pattern has been a highlight, showcasing a paradigm shift in handling validations and operations without resorting to exceptions, thus enhancing performance and maintainability. This approach not only makes our APIs more resilient but also aligns with the principles of clean and functional programming by clearly communicating success and failure states in a type-safe manner.
+
+In conclusion, the evolution of API development within the .NET ecosystem continues to provide developers with tools and patterns that elevate the quality and usability of our services. As we've seen, the integration of Open API with .NET 8 Minimal APIs, when done thoughtfully, can lead to APIs that are not only easier to use and document but also more enjoyable to build. By adopting these strategies, we not only adhere to the latest standards but also pave the way for more efficient, reliable, and scalable API development, ensuring our superhero APIs are not just powerful but also a pleasure to work with for developers and consumers alike. So, fellow web developers, let's harness these capabilities to create APIs that are truly heroic in their clarity, consistency, and robustness.
 
 ## Resources
 
-TBC
+- [Ardalis | Result](https://github.com/ardalis/Result)
+- [Microsoft Docs | TypedResults](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/responses?view=aspnetcore-8.0#typedresults-vs-results)

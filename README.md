@@ -10,6 +10,30 @@ Probably the most feature-rich Next.js markdown blogging template out there. Eas
 
 Check out the documentation below to get started.
 
+## Installation
+
+```bash
+ yarn
+```
+
+## Development
+
+If you're on windows you'll first need to run the following command in PowerShell:
+
+```bash
+ $env:PWD = Get-Location
+```
+
+First, run the development server:
+
+```bash
+ yarn dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+Edit the layout in `app` or content in `data`. With live reloading, the pages auto-updates as you edit them.
+
 ## Features
 
 - Next.js with Typescript
@@ -47,30 +71,6 @@ Check out the documentation below to get started.
 - [Simple MDX image grid](https://tailwind-nextjs-starter-blog.vercel.app/blog/pictures-of-canada)
 - [Example of long prose](https://tailwind-nextjs-starter-blog.vercel.app/blog/the-time-machine)
 - [Example of Nested Route Post](https://tailwind-nextjs-starter-blog.vercel.app/blog/nested-route/introducing-multi-part-posts-with-nested-routing)
-
-## Installation
-
-```bash
-yarn
-```
-
-## Development
-
-If you're on windows you'll first need to run the following command in PowerShell:
-
-```bash
-$env:PWD = Get-Location
-```
-
-First, run the development server:
-
-```bash
-yarn dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-Edit the layout in `app` or content in `data`. With live reloading, the pages auto-updates as you edit them.
 
 ## Extend / Customize
 
