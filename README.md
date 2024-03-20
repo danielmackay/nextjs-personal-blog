@@ -1,4 +1,8 @@
-![tailwind-nextjs-banner](/public/static/branding/icon-dark.png)
+<div align="center">
+
+![DDC Icon](/public/static/branding/icon-dark.png)
+
+</div>
 
 # [Dan Does Code Blog](https://www.dandoescode.com/)
 
