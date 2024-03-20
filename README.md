@@ -1,4 +1,4 @@
-![tailwind-nextjs-banner](/public/static/images/03-Logo-Dark-Icon.png)
+![tailwind-nextjs-banner](/public/static/branding/icon-dark.png)
 
 # [Dan Does Code Blog](https://www.dandoescode.com/)
 
