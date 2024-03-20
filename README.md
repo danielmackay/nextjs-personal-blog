@@ -1,4 +1,4 @@
-![tailwind-nextjs-banner](/public/static/images/twitter-card.png)
+![tailwind-nextjs-banner](/public/static/images/03-Logo-Dark-Icon.png)
 
 # [Dan Does Code Blog](https://www.dandoescode.com/)
 
