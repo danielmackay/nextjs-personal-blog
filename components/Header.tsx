@@ -18,7 +18,7 @@ const Header = () => {
                 srcDark="/static/branding/logo-dark.svg"
                 alt=""
                 width={300}
-                height={300}
+                height={24}
               />
             ) : (
               siteMetadata.headerTitle
