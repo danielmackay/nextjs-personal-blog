@@ -1,0 +1,367 @@
+---
+title: Minimal APIs - Typed Results and Open API Specification
+date: '2024-04-18'
+tags: ['dotnet', 'dotnet-8', 'api', 'openapi', 'aspnetcore', 'result-pattern']
+draft: false
+summary: "For web developers, building REST APIs is our bread and butter.  We use them to expose data and functionality to our clients and to integrate systems together.  However, there is no point building the most beautiful API in the world if consumers can't easily use it. In this article were going to look at several strategies we can use to integrate Open API (formerly Swagger) into our .NET 8 Minimal API.  We'll investigate some the pitfalls of some of these strategies, and look at how we can use Typed Results to make our APIs more consistent and easier to consume"
+images: ['/static/images/minimal-apis-typed-results-and-open-api/banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/minimal-apis-typed-results-and-open-api
+---
+
+![Banner](/static/images/minimal-apis-typed-results-and-open-api/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## Introduction
+
+For web developers, building REST APIs is our bread and butter.  We use them to expose data and functionality to our clients and to integrate systems together.  However, there is no point building the most beautiful API in the world if consumers can't easily use it.
+
+In this article we're going to look at several strategies we can use to integrate Open API (formerly Swagger) into our .NET 8 Minimal API.  We'll investigate some the pitfalls of some of these strategies, and look at how we can use Typed Results to make our APIs more consistent and easier to consume.
+
+
+## Open API Specification
+
+The Open API Specification (OAS) is a standard for documenting REST APIs.  It allows us to describe the endpoints, request and response models, and other details of our API in a machine-readable format.  This allows us to generate client libraries, documentation, and other tools to help consumers of our API.
+
+There are generally two ways we can go about generating an OAS document for our API:
+
+1. **Code-First**: We can use libraries like Swashbuckle to generate an OAS document from our code.  This is the most common approach, and is generally the easiest to get started with.
+2. **API-First**: We can write the OAS document by hand, and then use tools like NSwag to generate the server and client code from the document.  This approach is more flexible, but can be more work to set up and maintain.
+
+We'll be using the code-first approach.
+
+## Setup
+
+The following examples will be based around super heroes.  Each example will depend on a `Hero` and `HeroService` class, which we'll define as follows:
+
+```csharp
+public record Hero(string Name, string Power);
+
+public class HeroService
+{
+    private readonly List<Hero> _heroes =
+    [
+        new Hero("Superman", "Strength"),
+        new Hero("Batman", "Money"),
+        new Hero("Flash", "Speed")
+    ];
+
+    public Hero? GetByName(string name) => _heroes.FirstOrDefault(h => h.Name == name);
+
+    public void Add(Hero hero) => _heroes.Add(hero);
+}
+```
+
+## Option 1 - Basic API
+
+Creating a basic API with correct OAS documentation is pretty straight forward.
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Services for API metadata
+builder.Services.AddEndpointsApiExplorer();
+
+// Services for Swashbuckle OAS
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddSingleton<HeroService>();
+
+var app = builder.Build();
+
+// Middleware for OAS
+app.UseSwagger();
+
+// Middleware for Swagger UI
+app.UseSwaggerUI();
+
+app.UseHttpsRedirection();
+
+// Basic API
+app.MapPost("/heroes", (Hero hero, HeroService service) => { service.Add(hero); })
+    .WithName("CreateHero")
+    .WithOpenApi();
+
+app.Run();
+```
+
+After running the application we can see our swagger UI that has been generated from our OAS.  It shows the `CreateHero` endpoint, and the `Hero` model, and returns the correct status code.
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image1.png)
+
+The next options will be variations on this basic API.
+
+## Option 2 - Custom Status Codes
+
+Right now we're letting ASP.NET core infer a HTTP status code for us (200 OK).  What if we want to return a different status code (201 Created)?
+
+```csharp
+app.MapPost("/heroes", (Hero hero, HeroService service) =>
+    {
+        // updated 👇
+        service.Add(hero);
+        return Results.Created();
+        // updated 👆
+    })
+    .WithName("CreateHero")
+    .WithOpenApi()
+```
+
+We can see here our API is returning a 201, but something strange is happening.  It's reporting the 201 as 'undocumented', and is still reporting a 200 can be returned (which is incorrect).
+
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image2.png)
+
+We can fix this up by adding extra metadata to our endpoint.
+
+```csharp
+app.MapPost("/heroes", (Hero hero, HeroService service) =>
+    {
+        service.Add(hero);
+        return Results.Created();
+    })
+    .WithName("CreateHero")
+    .WithOpenApi()
+    .Produces(StatusCodes.Status201Created); // 👈 added
+```
+
+If we hit our API again we can see the 201 is now documented correctly.
+
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image3.png)
+
+## Option 3 - Handling Global Middleware
+
+What if we want to add a global middleware to our API?  For example, we might want to add a middleware to catch unhandled exceptions, and return a 500 Internal Server Error.  Another example is global catching of validation exceptions where we'll want to return a 400 Bad Request.  This approach is very common in many Clean Architecture templates.
+
+For this to work we first need to add validation to our `HeroService`:
+
+```csharp
+    public void Add(Hero hero)
+    {
+        // 👇 added
+        if (string.IsNullOrWhiteSpace(hero.Name))
+            throw new ValidationException("Name is required");
+
+        if (string.IsNullOrWhiteSpace(hero.Power))
+            throw new ValidationException("Power is required");
+        // 👆 added
+
+        _heroes.Add(hero);
+    }
+```
+
+We'll also need a custom `ValidationException`:
+
+```csharp
+public class ValidationException : Exception
+{
+    public ValidationException(string message) : base(message)
+    {
+    }
+}
+```
+
+We'll need to create a global exception handler (new to .NET 8):
+
+```csharp
+internal sealed class GlobalExceptionHandler : IExceptionHandler
+{
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+        if (exception is ValidationException)
+        {
+            var problemDetails = new ValidationProblemDetails()
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Bad Request",
+                Detail = exception.Message
+            };
+
+            httpContext.Response.StatusCode = problemDetails.Status.Value;
+
+            await httpContext.Response
+                .WriteAsJsonAsync(problemDetails, cancellationToken);
+
+            return true;
+        }
+
+        return false;
+    }
+}
+```
+
+The `GlobalExceptionHandler` will then need to be wired up in our `Program.cs`.  We'll also need to add some extra metadata to our API that documents our 404 BadRequest:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+builder.Services.AddSingleton<HeroService>();
+
+// 👇 added
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+// 👆 added
+
+var app = builder.Build();
+app.UseSwagger();
+app.UseSwaggerUI();
+app.UseHttpsRedirection();
+
+// API with correct metadata and global validation error handler
+app.MapPost("/heroes", (Hero hero, HeroService service) =>
+    {
+        service.Add(hero);
+        return Results.Created();
+    })
+    .WithName("CreateHero")
+    .WithOpenApi()
+    .Produces(StatusCodes.Status201Created)
+    .ProducesValidationProblem(); // 👈 added
+
+app.UseExceptionHandler(); // 👈 added
+
+app.Run();
+```
+If we send a request with an empty `Name` or `Power` we can see our global validation handler is working correctly.  We can see a 400 Bad Request is returned, and the error message is correctly documented.
+
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image3.png)
+
+### Using Exceptions as Flow Control
+
+Using exceptions allows us to have global handling for certain types of errors (server error, bad request, not found, etc).  They keep our code minimal as we don't need to add specific handling into every API endpoint.  However, we we've see we still need to ensure these status code are documented correctly.
+
+The problem with this approach is that we're using exceptions as flow control.  In other words, if a behavior is expected in your application (like a validation error), this is not an exceptional circumstance.
+
+> Exceptions should be used only for exceptional circumstances, not for flow control.
+
+David Fowler, a principal architect at Microsoft, has said:
+
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/fowler_comment.png)
+
+There are several problems with using exceptions as flow control:
+
+- **Performance** - Exceptions are also very expensive to throw and catch
+- **Breaks Principle of Least Astonishment** - It's not obvious what exceptions can be thrown from a method.  You need to look deep into the code.
+- **Flow Control** - Exceptions are complicated goto statements
+- **Exception Groups** - Exceptions can be grouped into 'expected' and 'unexpected' exceptions.  It can be difficult to know which is which.
+
+We'll take a look at addressing this in Option 6.
+
+## Option 4 - Typed Results
+
+[TypedResults](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/responses?view=aspnetcore-8.0#typedresults-vs-results) are a new feature in .NET 8.  They provide two main advantages:
+
+1. Return strongly-typed results which help with readability and unit testing
+2. Automatically provide OAS response meta-data
+
+Let's re-visit Option 1 and see how we can use Typed Results to improve our API.
+
+```csharp
+app.MapPost("/heroes", (Hero hero, HeroService service) =>
+    {
+        service.Add(hero);
+        return TypedResults.Created();
+    })
+    .WithName("CreateHero")
+    .WithOpenApi();
+```
+
+On first glance this might work the same, but we've been able to remove the `Produces()` function which manually added OAS metadata.  This is because the `TypedResults` automatically provides the correct OAS metadata for us.
+
+## Option 5 - Multiple Typed Results
+
+OK, so what if we want to return multiple status codes from our API?
+
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image5.png)
+
+We get an error, as the compiler is not able to determine what the return type of the function should be.  We can fix this as follows:
+
+```csharp
+// 👇 updated
+app.MapPost("/heroes", Results<BadRequest<string>, Created>(Hero hero, HeroService service) =>
+// 👆 updated
+    {
+        if (string.IsNullOrWhiteSpace(hero.Name))
+            return TypedResults.BadRequest("Name is required");
+
+        service.Add(hero);
+
+        return TypedResults.Created();
+    })
+    .WithName("CreateHero")
+    .WithOpenApi();
+```
+The added `Results<T>` type allows us to specify the return type of the function.  We can see our OAS is now correctly documented.
+
+Another added bonus of `TypedResults` is that we get a degree of type safety in our APIs.  For example:
+
+![basic api](/static/images/minimal-apis-typed-results-and-open-api/image6.png)
+
+In this API we can see we're returning a 200 OK code, which doesn't match a 201 Created which our function is advertising. The compiler can detect this and will throw an error.  Nice! 😎
+
+Now you might have noticed we're not throwing a `ValidationException` anymore.  Excellent!  No more exceptions for flow control, which has all the disadvantages discussed above.
+
+We're getting close to a good solution here, but I'm not happy that we're now adding validation logic directly into our API.  Let's see how we can fix this.
+
+## Option 6 - Typed Results + Result Pattern
+
+We need a way to validate within `HeroService` and communicate this `result` to the caller WITHOUT throwing exceptions.  We can do this with the Result pattern. The Result pattern is a way of returning a result from a function, which can be either a success or a failure.  This is a common pattern in functional programming languages, and is becoming more popular in C#.
+
+There are a few popular libraries that provide the Result pattern.  [ErrorOr](https://github.com/amantinband/error-or) is a popular choice, but we'll use Ardalis's [Result](https://github.com/ardalis/Result) library.
+
+After adding the `Ardalis.Result` NuGet package, we can re-write our `HeroService` to use the Result pattern:
+
+```csharp
+public Result Add(Hero hero)
+{
+    if (string.IsNullOrWhiteSpace(hero.Name))
+        return Result.Invalid(new ValidationError("Name is required"));
+
+    if (string.IsNullOrWhiteSpace(hero.Power))
+        return Result.Invalid(new ValidationError("Power is required"));
+
+    _heroes.Add(hero);
+
+    return Result.Success();
+}
+```
+
+To consume the result in our API we'll need to make the following changes:
+
+```csharp
+app.MapPost("/heroes", Results<ValidationProblem, Created>(Hero hero, HeroService service) =>
+    {
+        var result = service.Add(hero);
+        if (result.IsInvalid())
+            return TypedResultsExt.ValidationProblem(result);
+
+        return TypedResults.Created();
+    })
+    .WithName("CreateHero")
+    .WithOpenApi();
+```
+
+Finally, we've arrived at our ultimate solution!  We have type safe APIs, with no exceptions being used for flow control. 😍
+
+## Summary
+
+As we've journeyed through the realm of enhancing our .NET 8 Minimal APIs with Open API integration, we've explored various strategies from the basic to the advanced, all aimed at making our APIs more user-friendly and robust. Starting with the simple addition of Swagger for documenting our superhero-themed API, we ventured into customizing status codes, employing global middleware for error handling, and finally embracing the power of Typed Results and the Result pattern to refine our API design.
+
+By methodically advancing through each option, we've demonstrated how to move from a straightforward implementation to a sophisticated approach that not only improves readability and testability but also aligns with best practices by avoiding exceptions as flow control. The transition from manual OAS metadata management to leveraging Typed Results illustrates a significant improvement in developer experience, ensuring our API documentation is both accurate and easier to maintain.
+
+The exploration of the Result pattern has been a highlight, showcasing a paradigm shift in handling validations and operations without resorting to exceptions, thus enhancing performance and maintainability. This approach not only makes our APIs more resilient but also aligns with the principles of clean and functional programming by clearly communicating success and failure states in a type-safe manner.
+
+In conclusion, the evolution of API development within the .NET ecosystem continues to provide developers with tools and patterns that elevate the quality and usability of our services. As we've seen, the integration of Open API with .NET 8 Minimal APIs, when done thoughtfully, can lead to APIs that are not only easier to use and document but also more enjoyable to build. By adopting these strategies, we not only adhere to the latest standards but also pave the way for more efficient, reliable, and scalable API development, ensuring our superhero APIs are not just powerful but also a pleasure to work with for developers and consumers alike. So, fellow web developers, let's harness these capabilities to create APIs that are truly heroic in their clarity, consistency, and robustness.
+
+## Source Code
+
+Find the the source code for all examples on GitHub: [github.com/danielmackay/dandoescode-minimal-api-typed-results](https://github.com/danielmackay/dandoescode-minimal-api-typed-results)
+
+## Resources
+
+- [Ardalis | Result](https://github.com/ardalis/Result)
+- [Microsoft Docs | TypedResults](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/responses?view=aspnetcore-8.0#typedresults-vs-results)
