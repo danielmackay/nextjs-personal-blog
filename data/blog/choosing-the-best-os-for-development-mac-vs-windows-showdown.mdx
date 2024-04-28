@@ -1,0 +1,68 @@
+---
+title: Choosing the Best OS for Development - Mac vs. Windows Showdown
+date: '2024-04-28'
+tags: ['dotnet', 'mac', 'windows', 'rider', 'performance', 'devex']
+draft: false
+summary: TBC
+images: ['/static/images/choosing-the-best-os-for-development-mac-vs-windows-showdown/banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/choosing-the-best-os-for-development-mac-vs-windows-showdown
+---
+
+![Banner](/static/images/choosing-the-best-os-for-development-mac-vs-windows-showdown/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## Introduction
+
+I've been developing software on Windows for around 20 years now.  I've also been called a 'Microsoft Fanboy' from time to time. 😆  Recently, I've noticed that the majority of the younger guys at the office are all sporting MacBooks.  These are very slick looking machines and I'm always impressed by the battery life they give out.
+
+So after all these years on Windows, I decided to by a MacBook Air 13" as a 'travel device'.  Weighing just over 1kg and having a battery live of 18 hours, I thought this would be awesome for flights and conferences.
+
+When news got round the office, one of my colleagues responded with:
+
+![The Dark Side](/static/images/choosing-the-best-os-for-development-mac-vs-windows-showdown/the-dark-side.jpeg)
+
+The plan was to get a laptop better suited to travelling, while continuing to keep my Dell ‘workhorse’ as my daily driver.
+
+However, after a bit of use I had a feeling the MacBook Air was running quite a bit faster, so I did some basic tests.  Results were surprising so I thought I’d share.
+
+## Laptops
+
+|              | MacBook Air | Dell XPS 15 |
+|--------------|-------------|-------------|
+| Screen Size  | 13.4"       | 15.6"       |
+| CPU          | Apple M3    | Intel i9    |
+| RAM          | 24GB        | 32GB        |
+| SSD          | 512GB       | 512GB       |
+| Battery Life | 18 hours    | 13 hours    |
+| Weight       | 1.24kg      | 2.05kg      |
+| Price        | $2,699 AUD  | $4,500 AUD  |
+
+> NOTE: The Battery life is theoretical and based on the manufacturer's specifications.  With the Dell, I get around 5 hours of battery life.  I haven't been able to fully test the MacBook Air yet.
+
+## Tests
+
+### Rider Start-Up
+
+I did a couple of basic tests opening Rider, and building the solution.  For opening Rider, I had the solution automatically load, and did the test twice.  For the builds, I did a clean first, then timed a build and repeated twice.
+
+Results are as follows:
+SSW.CleanArchitecture
+Output image
+Figure: Performance of developer tasks on SSW.CleanArchitecture repo
+SSW.Induction (SugarLearning)
+Output image
+Figure: Performance of developer tasks on SSW.Induction repo
+
+### Compiling Code
+
+### Running Code
+
+### App Performance
+
+## Verdict
+
+I thought the result difference was substantially in favour of the Mac.  Based on these simple tests, it seems like the ‘travel laptop’ is going to now be my ‘daily driver’.
+
+All I need to do now is learn how to use a mac… 😂
