@@ -1,0 +1,169 @@
+---
+title: Choosing the Best OS for .NET Development - Mac vs. Windows Showdown
+date: '2024-05-20'
+tags: ['dotnet', 'mac', 'windows', 'rider', 'performance', 'devex']
+draft: false
+summary: As a longtime Windows developer, I decided to try a MacBook Air 13" as a travel device, influenced by my other colleagues who mostly prefer MacBooks. To my surprise, the Mac's performance and battery life far surpassed Windows in every test I conducted. This article is a comparison of the two laptops and the results of the tests.
+images: ['/static/images/choosing-the-best-os-for-development-mac-vs-windows-showdown/banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/choosing-the-best-os-for-dotnet-development-mac-vs-windows-showdown
+---
+
+![Banner](/static/images/choosing-the-best-os-for-dotnet-development-mac-vs-windows-showdown/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## Introduction
+
+I've been developing software on Windows for around 20 years now.  I've also been called a 'Microsoft Fanboy' from time to time. 😆  Recently, I've noticed that the majority of the younger guys at the office are all sporting MacBooks.  These are very slick looking machines and I'm always impressed by the battery life they give out.
+
+So after all these years on Windows, I decided to buy a MacBook Air 13" as a 'travel device'.  Weighing just over 1kg and having a battery live of 18 hours, I thought this would be awesome for flights and conferences.
+
+When news got round the office, one of my colleagues responded with:
+
+![The Dark Side](/static/images/choosing-the-best-os-for-dotnet-development-mac-vs-windows-showdown/the-dark-side.jpeg)
+
+The plan was to get a laptop better suited to travelling, while continuing to keep my Dell ‘workhorse’ as my daily driver.
+
+However, after a bit of use I had a feeling the MacBook Air was running quite a bit faster, so I did some basic tests.  Results were surprising so I thought I’d share.
+
+## Laptops
+
+|              | MacBook Air | Dell XPS 15            |
+|--------------|-------------|------------------------|
+| Screen Size  | 13.6"       | 15.6"                  |
+| CPU          | Apple M3    | Intel i9               |
+| RAM          | 24GB        | 32GB                   |
+| SSD          | 512GB       | 512GB                  |
+| Battery Life | 18 hours    | 13 hours (theoretical) |
+| Weight       | 1.24kg      | 2.05kg                 |
+| Price        | $2,699 AUD  | $4,371 AUD             |
+
+*NOTE: The battery life is theoretical and based on the manufacturer's specifications.  With the Dell, I get around 5 hours of battery life.  I haven't been able to fully test the MacBook Air yet.*
+
+## Tests
+
+### Code Bases
+
+I decided to test the performance of the two laptops on both a small and large code bases:
+
+- [SSW.CleanArchitecture](https://github.com/SSWConsulting/SSW.CleanArchitecture)
+- [SSW.Induction (SugarLearning)](https://sugarlearning.com/)
+
+|               | SSW.CleanArchitecture | SSW.Induction |
+|---------------|-----------------------|---------------|
+| Project Size  | Small                 | Large         |
+| Files         | 241                   | 2506          |
+| Lines of Code | 51169                 | 446383        |
+
+*NOTE: [cloc](https://github.com/AlDanial/cloc) was used to get the lines of code.*
+
+### Test 1 - IDE Start-Up
+
+The first test was to open up the IDE.  For this test I used Rider which was configured to open the solution automatically. I stopped the test once all analysis and indexing had completed.
+
+I did this 3 times and averaged the results, which are as follows:
+
+[//]: # (|           | SSW.CleanArchitecture | SSW.Induction |)
+[//]: # (|-----------|-----------------------|---------------|)
+[//]: # (| Windows   | 34                    | 47            |)
+[//]: # (| Mac       | 9                     | 10            |)
+
+![IDE Start-up](/static/images/choosing-the-best-os-for-dotnet-development-mac-vs-windows-showdown/graph1.png)
+*Figure: Rider opens 280% to 370% faster on Mac*
+
+*NOTE: Graph above was produced by giving ChatGPT a markdown table and asking it to generate a bar graph 🤖*
+
+### Test 2 - Compiling Code
+
+For the builds, I did a clean first, then timed a build and repeated twice.
+
+Building the code with Rider:
+
+[//]: # (|           | SSW.CleanArchitecture | SSW.Induction |)
+[//]: # (|-----------|-----------------------|---------------|)
+[//]: # (| Windows   | 6.775                 | 13.592        |)
+[//]: # (| Mac       | 2.859                 | 6.149         |)
+
+![Building with Rider](/static/images/choosing-the-best-os-for-dotnet-development-mac-vs-windows-showdown/graph2.png)
+*Figure: Rider compiles code 121% 137% to faster on a Mac*
+
+Building the code via the .NET CLI:
+
+[//]: # (|           | SSW.CleanArchitecture | SSW.Induction |)
+[//]: # (|-----------|-----------------------|---------------|)
+[//]: # (| Windows   | 4.24                  | 17.37         |)
+[//]: # (| Mac       | 3.35                  | 5.43          |)
+
+![Building with .NET CLI](/static/images/choosing-the-best-os-for-dotnet-development-mac-vs-windows-showdown/graph3.png)
+*Figure: .NET CLI compiles code 27% to 220% faster on a Mac*
+
+You might notice that the CLI build time is even higher for SSW.Induction.  I believe that is due to a large number of warnings that need to be output to the screen during each build.
+
+### Test 3 - Running Code
+
+For the final test, I wanted to see how the performance of a website would compare between Windows and Mac.  I decided to do this on the SSW.CleanArchitecture solution only due to simplicity of its setup and use.  We will use K6 to do a load test which will determine the maximum number of users and requests per second that the API can handle.
+
+The load test we will use is:
+
+```js
+import http from 'k6/http';
+import { sleep, check } from 'k6';
+import { Rate } from 'k6/metrics';
+
+export const errorRate = new Rate('errors');
+
+export let options = {
+    insecureSkipTLSVerify: true,
+    noConnectionReuse: false,
+    vus: 30,  // number of virtual users
+    duration: '2m',  // duration of the test
+};
+
+export default function () {
+  const url = 'https://localhost:7255/heroes';
+
+  check(http.get(url), {
+    'status is 200': (r) => r.status == 200,
+  }) || errorRate.add(1);
+
+  sleep(1);
+}
+```
+
+This is a bit of a crude test, but it will give us an idea of the performance difference between the two laptops.  What I'm really looking for here is how many requests per second the webserver can handle.  The trick here is to continually increase the number of virtual users until the server starts to be able to handle less web requests.  Through a bit of experimentation I found 30 VU's on the Mac was the sweet spot, before performance started to degrade.
+
+Let's see what happened!
+
+|                | Windows | Mac  |
+|----------------|---------|------|
+| Total Requests | 2502    | 3032 |
+
+![Performance - Total Requests](/static/images/choosing-the-best-os-for-dotnet-development-mac-vs-windows-showdown/perf3.png)
+*Figure: Mac is 21% faster than Windows*
+
+
+[//]: # (|                     | Windows   | Mac       |)
+[//]: # (|---------------------|-----------|-----------|)
+[//]: # (| Requests Per Second | 20.619218 | 25.040466 |)
+
+
+![Performance - Requests Per Second](/static/images/choosing-the-best-os-for-dotnet-development-mac-vs-windows-showdown/perf2.png)
+*Figure: Mac is 21% faster than Windows*
+
+## Verdict
+
+In every test I did, the results of the Mac far surpassed Windows.  I had a suspicion that the Mac would be faster, but the actual results blew me away.  I realize these tests are not really comparing 'apples with apples' as the hardware is different, but when you compare the performance to the price, the Mac is a clear winner in terms of both value for money and performance.
+
+I have a long relationship with Windows and Visual Studio.  However, I now find myself doing real work on a MacBook and Rider. I find this refreshing and exciting.  It's great to know that I have options when it comes to modern .NET Development.
+
+Based on these tests, it seems like the ‘travel laptop’ is going to now be my ‘daily driver’. 😍
+
+All I need to do now is learn how to use a Mac… 😂
+
+## Resources
+
+- [K6](https://k6.io/)
+- [load-testing-restful-apis-with-k6](https://k6.io/blog/load-testing-restful-apis-with-k6/)
+- [SSW.CleanArchitecture](https://github.com/SSWConsulting/SSW.CleanArchitecture)
+- [SSW.Induction (SugarLearning)](https://sugarlearning.com/)
