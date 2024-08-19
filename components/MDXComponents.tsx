@@ -9,6 +9,7 @@ import BicepSeriesHeader from '@/components/bicep/BicepSeriesHeader'
 import BicepSeriesResources from '@/components/bicep/BicepSeriesResources'
 import BitBucketPipelinesSeriesHeader from '@/components/bit-bucket/BitBucketPipelinesSeriesHeader'
 import BitBucketPipelinesSeriesResources from '@/components/bit-bucket/BitBucketPipelinesSeriesResources'
+import ModularMonolithSeriesHeader from '@/components/modular-monolith/ModularMonolithSeriesHeader'
 
 export const components: MDXComponents = {
   Image,
@@ -21,4 +22,5 @@ export const components: MDXComponents = {
   BicepSeriesResources,
   BitBucketPipelinesSeriesHeader,
   BitBucketPipelinesSeriesResources,
+  ModularMonolithSeriesHeader,
 }
