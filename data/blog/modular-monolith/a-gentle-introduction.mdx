@@ -1,0 +1,154 @@
+---
+title: Modular Monolith - A Gentle Introduction
+date: '2024-08-19'
+tags: ['dotnet', 'architecture', 'modular-monolith-architecture', 'clean-architecture', 'vertical-slice-architecture', 'microservices-architecture']
+draft: false
+summary: When starting a new project, one of the first and most important decisions you'll have to make is choosing a Software Architecture. Choose an architecture that is too simple and the project will quickly outgrow it. Choose an architecture that is too complex, and you'll spend more time maintaining the architecture than building the project.  Therefore, it's important to choose an architecture that is 'just right'. Introducing Modular Monoliths — "The Goldilocks Architecture".
+images: ['/static/images/modular-monolith/banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/modular-monolith/a-gentle-introduction
+---
+
+![Banner](/static/images/modular-monolith/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+<ModularMonolithSeriesHeader />
+
+## Introduction
+
+When starting a new project, one of the first and most important decisions you'll have to make is choosing a Software Architecture. Choose an architecture that is too simple and the project will quickly outgrow it. Choose an architecture that is too complex, and you'll spend more time maintaining the architecture than building the project.  Therefore, it's important to choose an architecture that is *just right*.
+
+Introducing Modular Monoliths — "The Goldilocks Architecture".
+
+<center>
+![Goldilocks](/static/images/modular-monolith/goldilocks.gif)
+</center>
+
+
+## Architecture Comparison
+
+Before we dive into Modular Monoliths, let's take a look at some of the other common architectures for context.
+
+### Clean Architecture
+
+Clean Architecture is a monolithic architecture that emphasizes separation of concerns, making your system easier to maintain and scale. This architecture is designed to keep the business logic independent of the frameworks and tools, which helps in achieving a decoupled and testable codebase.
+
+Clean Architecture slices features horizontally into layers:
+
+- `Presentation`: UI or API
+- `Application`: Orchestration of business logic
+- `Domain`: Business logic
+- `Infrastructure`: External dependencies such as databases, APIs, etc.
+
+![Clean Architecture](/static/images/modular-monolith/ca.jpg)
+
+### Vertical Slice Architecture
+
+Vertical Slice Architecture is also a monolith architecture and structures your system around features rather than technical layers. Each feature is implemented end-to-end, including UI/API, business logic, and data access. A vertical slice may share common code, but the goal is to keep this to a minimum. This approach improves maintainability and reduces the risk of breaking changes.
+
+For example, a User Registration feature could be implemented as a vertical slice:
+
+- `UserRegistration` folder
+    - `UserRegistrationEndpoint.cs`
+    - `UserRegistrationHandler.cs` (or `UserRegistrationService.cs`)
+    - `UserRegistrationRepository.cs`
+    - `UserEntity.cs`
+
+<div style={{maxWidth: "500px", margin: "auto"}}>
+![Vertical Slice Architecture](/static/images/modular-monolith/vsa.jpg)
+</div>
+
+### Microservices
+
+Microservices architecture is a distributed architecture involves splitting the application into small, independently deployable services. Each service focuses on a specific business capability and can be developed, deployed, and scaled independently. This approach is beneficial for complex and large-scale applications with multiple teams working on different parts. Internally, each service could be implemented using a monolithic architecture such as Clean Architecture or Vertical Slice Architecture.
+
+<div style={{maxWidth: "500px", margin: "auto"}}>
+![Microservices](/static/images/modular-monolith/ms.jpg)
+</div>
+
+Although Microservices brings some powerful benefits, it also comes with its own set of challenges which I call *Microservices Tax*:
+
+- **Complexity**: Distributed systems are inherently more complex than monolithic systems
+- **Development Velocity**: Inter-service communication can be challenging and increase development times.  Inter-team communication can also cause delays
+- **Data Management**: Data consistency and transactions become more complex
+- **Deployment Complexity**: Managing multiple services can be challenging, as versioning and deployment need to be carefully managed
+- **Testing**: End-to-end testing can be difficult
+- **Resilience**: Services need to be resilient to transient faults and service availability
+
+Oftentimes, a Microservice is mistakenly seen as the only alternative to a Monolithic Architecture such as Clean Architecture or Vertical Slice Architecture. However, there is a middle-ground between a Monolith and Microservices — the Modular Monolith.
+
+## What is a Modular Monolith?
+
+A Modular Monolith organizes the system into modules that encapsulate specific functionalities. While it runs as a single application, it retains some benefits of Microservices, such as independent modules development and testing. It’s a good middle-ground between a monolith and microservices.
+
+Each module should encapsulate a specific business capability, such as `UserManagement`, `OrderManagement`, `ProductCatalog`, etc. Similar to Microservices, a module should have minimal dependencies on other modules and only interact with them through well-defined interfaces. From an implementation point of view each module could be built using Clean Architecture or Vertical Slice Architecture (or perhaps even no architecture). Similarly, a Microservices Architecture could use Clean Architecture or Vertical Slice Architecture within each service.
+
+Each module is also responsible for it's own data access, and could have it's own database and schema. Different modules can also use different data stores (e.g. SQL Server, CosmosDB, Redis, etc.) depending on the needs of the module.
+
+Modular Monoliths and Microservices are both similar in that they provide a logically separated architecture.  The key difference is that Modular Monoliths are physically co-located in a single process, whereas Microservices are physically separated into different processes.
+
+![Modular Monolith](/static/images/modular-monolith/mma.jpg)
+
+[//]: # (In a nutshell, Modular Monoliths provide the logical separation of concerns and independent modules of Microservices, without the complexity of a physically separated  distributed system.)
+
+*NOTE: In the real world, I don't recommend using a database like Redis Cache as a primary data store for business-critical information such as orders. This is just an example to illustrate the concept of Modular Monoliths.*
+
+### Code Structure
+
+OK, I understand conceptually what a Modular Monolith is, but what does it look like in code?
+
+<div style={{maxWidth: "500px", margin: "auto"}}>
+![Code Structure](/static/images/modular-monolith/code-structure.png)
+</div>
+
+In the code structure above, each module is a separate folder in the solution. I've chosen to use a Vertical Slice Architecture within each module, in the interests of simplicity and high-cohesion.  You'll also notice I have a test project within each module, which is important to ensure each module is independently testable.
+
+The `WebApi` project is an ASP.NET Core Web Application and is our host and entry point into the application. It will import all other modules as dependencies.  This project is kept intentionally lean as the majority of the code should be contained within the modules.
+
+`Common.SharedKernel` is a common library that can be used to share code between multiple modules. This could include things like base classes, interfaces, enums, etc.  However, this should be used sparingly as it can lead to tight coupling between modules.
+
+We'll dive deeper into the code structure in future posts.
+
+## Why Choose a Modular Monolith?
+
+Alright, so we now know what a Modular Monolith is and how to structure our code from a high level, but why would you choose this architecture over Microservices?
+
+The big benefit that Modular Monoliths provide is logical separation of code. This helps your monolith application to grow and scale without becoming a tangled mess of spaghetti code. It also allows you to incrementally transition to a Microservices architecture in the future, as each module can be extracted into its own service.
+
+Another huge benefit is the ability to adjust module boundaries. This is one of the hardest things to get right in Microservices, and the biggest downfall as to why many Microservices architectures fail. With a Modular Monolith, you can combine modules that are too small or frequently communicate with each other. You can also split modules that are too large or have too many dependencies.
+
+### Advantages Over Microservices
+
+1. **Complexity**: Reduced due to a single process and reduction of inter-service communication over the network
+2. **Maintainability**: Improved code organization and maintainability
+3. **Development Velocity**: Faster development times due to reduced complexity
+4. **Debugging**: Easier testing and debugging due to a single process and the ability to step from one module to another
+5. **Deployment**: Simplicity due to single deployment unit
+6. **Versioning**: No need to worry about API versioning, as all modules are in the same process and deployed together
+7. **Resilience**: Less worrying about transient faults, service availability and networking issues
+8. **Cost**: Reduced operational costs due to less infrastructure required
+
+## Real World Examples
+
+There are many companies that have successfully implemented very large Modular Monoliths.
+
+To name a few:
+
+- Shoppify
+- Levels.fyi
+- StackOverflow
+
+## Conclusion
+
+In the ever-evolving landscape of software development, choosing the right architecture is crucial for the success of your project. The Modular Monolith offers a compelling balance between the simplicity of a monolith and the logical separation of microservices. It allows you to structure your codebase with clear module boundaries, making it easier to maintain, test, and evolve over time. By adopting a Modular Monolith, you can enjoy the benefits of logical separation and independent module development, all while avoiding the complexities and overhead associated with microservices.
+
+Modular Monoliths are a pragmatic choice for those looking to strike a balance between development velocity and architectural robustness. Whether you’re working on a startup or an enterprise application, the Modular Monolith could be the "Goldilocks" architecture that is just right for your needs.
+
+In the next post, we'll take a deep dive into the code structure of a Modular Monolith and explore how to implement one in a .NET application.
+
+## Resources
+
+- https://github.com/danielmackay/dotnet-modular-monolith
+- https://www.milanjovanovic.tech/blog/what-is-a-modular-monolith
+- https://ardalis.com/introducing-modular-monoliths-goldilocks-architecture/
