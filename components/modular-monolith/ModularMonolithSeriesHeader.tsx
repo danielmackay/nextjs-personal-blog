@@ -14,7 +14,13 @@ const ModularMonolithSeriesHeader = () => {
             Part 1: Modular Monoliths - A Gentle Introduction
           </Link>
         </li>
-        <li>Part 2: Coming Soon</li>
+        <li>
+          <Link href="/blog/modular-monolith/implementation-deep-dive">
+            Part 2: Modular Monoliths - Implementation Deep Dive
+          </Link>
+        </li>
+
+        <li>Part 3: Coming Soon</li>
       </ul>
     </>
   )

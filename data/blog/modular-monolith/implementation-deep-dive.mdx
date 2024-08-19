@@ -1,0 +1,60 @@
+---
+title: Modular Monolith - Implementation Deep Dive
+date: '2024-08-20'
+tags: ['dotnet', 'architecture', 'modular-monolith-architecture', 'clean-architecture', 'vertical-slice-architecture', 'microservices-architecture']
+draft: false
+summary: TODO
+images: ['/static/images/modular-monolith/part2-banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/modular-monolith/implementation-deep-dive
+---
+
+![Banner](/static/images/modular-monolith/part2-banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+<ModularMonolithSeriesHeader />
+
+## Introduction
+
+In the [previous post](/blog/modular-monolith/overview), we discussed the concept of a Modular Monolith Architecture (MMA) and how it compares to other architectural styles. In this post, we will dive deeper into the implementation details of a modular monolith.
+
+## Overview
+
+In this post we will be building out the major pieces of an MMA application.
+
+![Modular Monolith](/static/images/modular-monolith/mma.jpg)
+
+## Host
+
+Let's start with the Host.  This is the entry point or gateway into our application. It is responsible for bootstrapping the application, setting up the DI container, and configuring the application. The Host is the only project that references all other projects in the solution.
+
+As a general rule, the host should contain no business logic. It should be as thin as possible and only contain code that is necessary to bootstrap the application.  Specific configuration needed by each module should be configured in the module itself.
+
+
+
+## Modules
+
+### To CA or not to CA?
+
+## Persistence
+
+## Common
+
+## Testing
+
+
+
+
+
+
+
+## Conclusion
+
+In the next post we will look out how to decide which modules we create and what features should go in each. Stay tuned! 😎
+
+## Resources
+
+- [github.com/danielmackay/dotnet-modular-monolith](https://github.com/danielmackay/dotnet-modular-monolith)
+- [milanjovanovic.tech/blog/what-is-a-modular-monolith](https://www.milanjovanovic.tech/blog/what-is-a-modular-monolith)
+- [ardalis.com/introducing-modular-monoliths-goldilocks-architecture](https://ardalis.com/introducing-modular-monoliths-goldilocks-architecture/)
