@@ -17,7 +17,7 @@ canonicalUrl: https://www.dandoescode.com/blog/modular-monolith/a-gentle-introdu
 
 ## Introduction
 
-When starting a new project, one of the first and most important decisions you'll have to make is choosing a Software Architecture. Choose an architecture that is too simple and the project will quickly outgrow it. Choose an architecture that is too complex, and you'll spend more time maintaining the architecture than building the project.  Therefore, it's important to choose an architecture that is *just right*.
+When starting a new project, one of the first and most important decisions you'll have to make is choosing a Software Architecture. Choose an architecture that is too simple and the project will quickly outgrow it. Choose an architecture that is too complex, and you'll spend more time maintaining the architecture than building new features. Therefore, it's important to choose an architecture that is *just right*.
 
 Introducing Modular Monoliths — "The Goldilocks Architecture".
 
@@ -45,9 +45,9 @@ Clean Architecture slices features horizontally into layers:
 
 ### Vertical Slice Architecture
 
-Vertical Slice Architecture is also a monolith architecture and structures your system around features rather than technical layers. Each feature is implemented end-to-end, including UI/API, business logic, and data access. A vertical slice may share common code, but the goal is to keep this to a minimum. This approach improves maintainability and reduces the risk of breaking changes.
+Vertical Slice Architecture is also a monolith architecture and structures your system around features rather than technical layers. Each feature is implemented end-to-end, including UI/API, business logic, and data access. A vertical slice may share common code with other slices, but the goal is to keep this to a minimum. This approach improves maintainability and reduces the risk of breaking changes.
 
-For example, a User Registration feature could be implemented as a vertical slice:
+For example, a User Registration feature could be implemented as follows:
 
 - `UserRegistration` folder
     - `UserRegistrationEndpoint.cs`
@@ -116,28 +116,26 @@ Alright, so we now know what a Modular Monolith is and how to structure our code
 
 The big benefit that Modular Monoliths provide is logical separation of code. This helps your monolith application to grow and scale without becoming a tangled mess of spaghetti code. It also allows you to incrementally transition to a Microservices architecture in the future, as each module can be extracted into its own service.
 
-Another huge benefit is the ability to adjust module boundaries. This is one of the hardest things to get right in Microservices, and the biggest downfall as to why many Microservices architectures fail. With a Modular Monolith, you can combine modules that are too small or frequently communicate with each other. You can also split modules that are too large or have too many dependencies.
+Another huge benefit is the ability to adjust module boundaries. This is one of the hardest things to get right in Microservices, and the biggest downfall as to why many Microservices architectures fail. With a Modular Monolith, you can combine modules that are too small or frequently communicate with each other.Likewise, you can also split modules that are too large or have too many dependencies.
 
 ### Advantages Over Microservices
 
-1. **Complexity**: Reduced due to a single process and reduction of inter-service communication over the network
-2. **Maintainability**: Improved code organization and maintainability
-3. **Development Velocity**: Faster development times due to reduced complexity
-4. **Debugging**: Easier testing and debugging due to a single process and the ability to step from one module to another
-5. **Deployment**: Simplicity due to single deployment unit
-6. **Versioning**: No need to worry about API versioning, as all modules are in the same process and deployed together
-7. **Resilience**: Less worrying about transient faults, service availability and networking issues
-8. **Cost**: Reduced operational costs due to less infrastructure required
+1. **Reduced Complexity**: Due to a single process and reduction of inter-service communication over the network
+2. **Improved Maintainability**: Improved code organization and maintainability
+3. **Faster Development Velocity**: Due to reduced complexity
+4. **Easier Debugging**: Easier testing and debugging due to a single process and the ability to step from one module to another
+5. **Deployment Simplicity**: Simplicity due to single deployment unit
+6. **Reduced Versioning**: No need to worry about API versioning, as all modules are in the same process and deployed together
+7. **Increased Resilience**: Less worrying about transient faults, service availability and networking issues
+8. **Lower Cost**: Reduced operational costs due to less infrastructure required
 
 ## Real World Examples
 
-There are many companies that have successfully implemented very large Modular Monoliths.
+There are many companies that have successfully implemented very large Modular Monoliths. To name a few:
 
-To name a few:
-
-- Shoppify
-- Levels.fyi
-- StackOverflow
+- [shopify](https://www.shopify.com)
+- [levels.fyi](https://www.levels.fyi)
+- [stackoverflow](https://stackoverflow.com/)
 
 ## Conclusion
 
@@ -149,6 +147,6 @@ In the next post, we'll take a deep dive into the code structure of a Modular Mo
 
 ## Resources
 
-- https://github.com/danielmackay/dotnet-modular-monolith
-- https://www.milanjovanovic.tech/blog/what-is-a-modular-monolith
-- https://ardalis.com/introducing-modular-monoliths-goldilocks-architecture/
+- [github.com/danielmackay/dotnet-modular-monolith](https://github.com/danielmackay/dotnet-modular-monolith)
+- [milanjovanovic.tech/blog/what-is-a-modular-monolith](https://www.milanjovanovic.tech/blog/what-is-a-modular-monolith)
+- [ardalis.com/introducing-modular-monoliths-goldilocks-architecture](https://ardalis.com/introducing-modular-monoliths-goldilocks-architecture/)
