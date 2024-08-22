@@ -80,7 +80,7 @@ Oftentimes, a Microservice is mistakenly seen as the only alternative to a Monol
 
 ## What is a Modular Monolith?
 
-A Modular Monolith organizes the system into modules that encapsulate specific functionalities. While it runs as a single application, it retains some benefits of Microservices, such as independent modules development and testing. It’s a good middle-ground between a monolith and microservices.
+A Modular Monolith organises the system into modules that encapsulate specific functionalities. While it runs as a single application, it retains some benefits of Microservices, such as independent modules development and testing. It’s a good middle-ground between a monolith and microservices.
 
 Each module should encapsulate a specific business capability, such as `UserManagement`, `OrderManagement`, `ProductCatalog`, etc. Similar to Microservices, a module should have minimal dependencies on other modules and only interact with them through well-defined interfaces. From an implementation point of view each module could be built using Clean Architecture or Vertical Slice Architecture (or perhaps even no architecture). Similarly, a Microservices Architecture could use Clean Architecture or Vertical Slice Architecture within each service.
 
@@ -121,7 +121,7 @@ Another huge benefit is the ability to adjust module boundaries. This is one of 
 ### Advantages Over Microservices
 
 1. **Reduced Complexity**: Due to a single process and reduction of inter-service communication over the network
-2. **Improved Maintainability**: Improved code organization and maintainability
+2. **Improved Maintainability**: Improved code organisation and maintainability
 3. **Faster Development Velocity**: Due to reduced complexity
 4. **Easier Debugging**: Easier testing and debugging due to a single process and the ability to step from one module to another
 5. **Deployment Simplicity**: Simplicity due to single deployment unit
@@ -139,9 +139,11 @@ There are many companies that have successfully implemented very large Modular M
 
 ## Conclusion
 
-In the ever-evolving landscape of software development, choosing the right architecture is crucial for the success of your project. The Modular Monolith offers a compelling balance between the simplicity of a monolith and the logical separation of microservices. It allows you to structure your codebase with clear module boundaries, making it easier to maintain, test, and evolve over time. By adopting a Modular Monolith, you can enjoy the benefits of logical separation and independent module development, all while avoiding the complexities and overhead associated with microservices.
+Modular Monoliths are a great choice for striking a balance between development velocity and maintainability. Whether you’re working on a startup or an enterprise application, the Modular Monolith could be the "Goldilocks" architecture that is just right for your needs.
 
-Modular Monoliths are a pragmatic choice for those looking to strike a balance between development velocity and architectural robustness. Whether you’re working on a startup or an enterprise application, the Modular Monolith could be the "Goldilocks" architecture that is just right for your needs.
+Within the realm of software development, different architectures pop in and out of vogue constantly. Keeping up with the trends can be exhausting, but choosing the right architecture is crucial for the longevity of your product. The Modular Monolith provides a trade-off without the compromise between the simplicity of a monolith and the logical separation of microservices.
+
+Modular Monoliths allow you to structure your code with clear boundaries, making it easier to maintain, test, and evolve over time.
 
 In the next post, we'll take a deep dive into the code structure of a Modular Monolith and explore how to implement one in a .NET application.
 
