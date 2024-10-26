@@ -165,7 +165,7 @@ When building a Modular Monolith, each module has the freedom to structure it's 
 
 Another benefit of using VSA and a single project is that we can provide better encapsulation for our module. By defaulting to marking classes as `internal` we can be very specific about what we want to expose (which isn't much). This helps to keep our modules decoupled and easier to maintain.
 
-## REPR Pattern
+### REPR Pattern
 
 For each Use Case (e.g. a command or query), I've decided to use the Request-Endpoint-Response (REPR) pattern. Using this approach all code needed for a single use case (excluding the Domain) is located in the same file. I've chosen to use a static class and several nested classes that each have their own responsibility.
 
@@ -244,7 +244,7 @@ response.Match(TypedResults.Ok, ErrorOrExt.Problem);
 
 On success, the value is passed to `TypedResults.Ok()` and on failure, the error is passed into `ErrorOrExt.Problem()` to map the error into a HTTP status code. Everything works as expected without the use of exceptions for flow control. Fantastic. 😎
 
-## Domain
+### Domain
 
 The last part of the module is the `Domain`. As mentioned earlier, Aggregates map very nicely to features. Following this it makes sense to keep the `Domain` in the root of the feature, close to the Use Cases that depend on it. Our `Domain` model is free of any `Infrastructure` concerns such as EF Core configuration.  It is a pure POCO that contains business logic, business validation, and is trivial to unit test.
 
