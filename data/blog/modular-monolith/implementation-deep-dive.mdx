@@ -46,7 +46,8 @@ The host project is very similar to a regular Web API project and wires up the f
 - Swagger UI
 - Global Error Handling
 - MediatR
-- Aspire Service Defaults (more on this later)
+- Aspire Service Defaults
+- Common dependencies (Shared Kernel)
 
 ```csharp {23-27, 41-45}
 using Common.SharedKernel;
@@ -101,6 +102,8 @@ var app = builder.Build();
 }
 ```
 
+Each module is wired up in two different ways. Once to register services and dependencies. Another time to wire up middleware and routes.
+
 ## Modules
 
 Now onto the modules themselves. A typical module will look as follows:
@@ -113,9 +116,9 @@ From a project point of view we have the following:
 
 - **Module**: Module registration and feature implementation
 - **Messages**: API for inter-module communication
-- **Tests**: Combination of both unit and integration tests
+- **Tests**: Contains both unit and integration tests
 
-At the root of the module you will find a class responsible for registering the module. In our Warehouse module this is the `WarehouseModule` class, that we saw used in `progam.cs`.
+At the root of the module you will find a class responsible for registering everything the module needs. In our Warehouse module this is the `WarehouseModule` class, that we saw used in `progam.cs`.
 
 ```csharp
 public static class WarehouseModule
@@ -155,19 +158,21 @@ The rest of the module can be categoried as either a `feature` or `common`. Comm
 
 ### Features
 
-Features are the heart of the module, and where you'll be spending most of your time. When using a Domain-Driven Design approach as I'm doing here, features map very nicely to aggregates. When mapping out the warehouse domain, I determined I would need 3 aggregates: `Products`, `BackOrders` and `Storage` and I created a feature for each of these.
+As we dive deeper, features are the heart of a module, and where you'll be spending most of your time. When using a Domain-Driven Design approach as I'm doing here, features map very nicely to aggregates. When mapping out the warehouse domain, I determined I would need 3 aggregates: `Products`, `BackOrders` and `Storage` and I created a feature for each of these.
 
 <div style={{maxWidth: "500px", margin: "auto"}}>
 ![Features](/static/images/modular-monolith/product-feature.png)
 </div>
 
-When building a Modular Monolith, each module has the freedom to structure it's code in whatever way makes the most sense for the functionality. Two main choices here are Vertical Style Architecture (VSA) and Clean Architecture (CA). While I love CA, the amount of projects needed (typically ~4) can cause the number of projects in a Modular Monolith to explode.  Furthermore, the mindset between a CA and a VSA is very different. CA focuses on splitting features into technical layers, whereas VSA focuses on splitting features into features. VSA and Modular Monoliths follow similar principles, once is grouping code by features, the other provides an additional grouping of those features into modules. Seeing as the principles are very similar, and the resulting code is simpler, I believe VSA works very well with Modular Monoliths.
+When building a Modular Monolith, each module has the freedom to structure it's code in whatever way makes the most sense for the functionality. Two main choices here are Vertical Style Architecture (VSA) and Clean Architecture (CA). While I love CA, the amount of projects needed (typically ~4) can cause the number of projects in a Modular Monolith to explode. Furthermore, the mindset between a CA and a VSA is very different. CA focuses on grouping code by technical concern, whereas VSA focuses on grouping code by feature. VSA and Modular Monoliths follow similar principles, once is grouping code by features, the other provides an additional grouping of those features into modules. Seeing as the principles are very similar, and the resulting code is simpler, I believe VSA compliments  Modular Monoliths.
 
 Another benefit of using VSA and a single project is that we can provide better encapsulation for our module. By defaulting to marking classes as `internal` we can be very specific about what we want to expose (which isn't much). This helps to keep our modules decoupled and easier to maintain.
 
 ### REPR Pattern
 
-For each Use Case (e.g. a command or query), I've decided to use the Request-Endpoint-Response (REPR) pattern. Using this approach all code needed for a single use case (excluding the Domain) is located in the same file. I've chosen to use a static class and several nested classes that each have their own responsibility.
+For each Use Case (e.g. a command or query), I've decided to use the Request-Endpoint-Response (REPR) [pattern](https://awesome-architecture.com/design-patterns/repr/). When using this approach all code needed for a single Use Case (excluding the Domain) is located in the same file. I find this structure very productive as nearly all code needed for a feature is in one file.
+
+For the implementation, I've chosen to use a static class and several nested classes that each have their own responsibility.
 
 ```csharp
 public static class CreateProductCommand
@@ -228,13 +233,13 @@ public static class CreateProductCommand
 
 In the `CreateProductCommand` Use Case we have the following:
 
-- **Request**: This defines the UseCase input
-- **Response**: This defines the UseCase output
+- **Request**: This defines the Use Case input
+- **Response**: This defines the Use Case output
 - **Endpoint**: Controls routing, mapping errors, and API documentation
-- **Validator**: Basic Input level validation
+- **Validator**: Basic input level validation
 - **Handler**: Implementation of the Use Case
 
-*NOTE: As an added benefit, this makes it SUPER easy to add new features.  Copy and paste a UseCase, change the top class name and start implementing*
+*NOTE: As an added benefit, this makes it SUPER easy to add new features. Simply copy and paste a UseCase, change the top class name and start implementing*
 
 Our `Handler` is returning a `ErrorOr<Response>`. This leverages the [ErrorOr](https://github.com/amantinband/error-or) library to implement the `Result` pattern. I much prefer this over throwing exceptions that we expect to magically get handled at a higher level. The `Handler` returns a class that is very specific about if the function succeeded or not. This also allows us to very cleanly provide a success or failure response from the API via:
 
@@ -330,7 +335,7 @@ While the goal of each module is to be as independent as possible, there will al
 
 In my [Modular Monolith](https://github.com/danielmackay/dotnet-modular-monolith) I've found the need for the following common code:
 
-- **API**: Extension to map
+- **API**: Extension to map between `ErrorOr` errors and HTTP status codes
 - **Behaviors**: MediatR behaviors for validation, logging, and global exception handling
 - **Discovery**: Automatic registration of Minimal APIs
 - **Domain**: Base classes, interfaces, and a small number of common entities
@@ -342,7 +347,7 @@ In my [Modular Monolith](https://github.com/danielmackay/dotnet-modular-monolith
 
 ## Conclusion
 
-Implementing a Modular Monolith Architecture provides a unique balance between the simplicity of a monolithic application and the development scalability benefits of microservices. This approach allows you to maintain modular boundaries, encapsulate domain logic, and adopt the Request-Endpoint-Response (REPR) pattern effectively. With careful structuring, each module functions as a self-contained unit, fostering maintainability and reducing interdependencies. By focusing on clean boundaries, using Vertical Slice Architecture (VSA) where appropriate, and leveraging a Shared Kernel only for essential cross-cutting concerns, a modular monolith can achieve high cohesion and low coupling, leading to a more scalable and resilient application.
+Implementing a Modular Monolith Architecture provides a unique balance between the simplicity of a monolithic application and the development scalability benefits of microservices. This approach allows us to maintain modular boundaries, encapsulate domain logic, and adopt the Request-Endpoint-Response (REPR) pattern effectively. With careful structuring, each module functions as a self-contained unit, fostering maintainability and reducing interdependencies. By focusing on clean boundaries, using Vertical Slice Architecture (VSA) where appropriate, and leveraging a Shared Kernel only for essential cross-cutting concerns, a Modular Monolith can achieve high cohesion and low coupling, leading to a more scalable and resilient application.
 
 This deep dive illustrates how a Modular Monolith can serve as an ideal starting point for *complex* applications, with the flexibility to adapt to evolving business needs and scaling requirements.
 
