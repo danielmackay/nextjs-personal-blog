@@ -29,9 +29,9 @@ Regardless of how complex the project is, the golden standard is to always be ab
 
 ## What is .NET Aspire?
 
-.NET Aspire is not one thing. I like to describe it as **tooling that helps us to build, debug and deploy distributed systems**. I used to be of the impression that Aspire was only good for Microservices. However, I've now come to the conclusion that it's useful for any .NET application that has more than one 'moving part'. This is especially true for Modular Monoliths 
+.NET Aspire is not one thing. I like to describe it as **tooling that helps us to build, debug and deploy distributed systems**. I used to have he opinion that Aspire was only good for Microservices. However, I've now come to the conclusion that it's useful for any .NET application that has more than one 'moving part'. This is especially true for Modular Monoliths.
 
-'Moving parts' could include:
+'Moving parts' include:
 
 - Applications
   - UI Frontends
@@ -47,7 +47,7 @@ Regardless of how complex the project is, the golden standard is to always be ab
 Microsoft advertise Aspire as being built on top of 4 pillars:
 
 - **Streamlined Inner Development Loop**: C# App Host, helps you to get up and running quickly, by providing a way to start and stop resources, run commands on resources, and wait for resources to be ready.
-- **Integrations**: Aspire provides a way to integrate with other infrastructure (via pre-configured NuGet packages), such as docker containers. The Aspire client integrations (e.g. `Aspire.Microsoft.EntityFrameworkCore.SqlServer`) configure defaults to provide Observability, resiliency, and scalability.
+- **Integrations**: Aspire provides a way to integrate with other infrastructure (via pre-configured NuGet packages), such as docker containers. The Aspire client integrations (e.g. `Aspire.Microsoft.EntityFrameworkCore.SqlServer`) configure defaults to provide observability, resiliency, and scalability.
 - **Developer Dashboard**: Observability how your app is running via Open Telemetry metrics, traces, and logs
 - **Deployment**: Easily provision cloud resources and deploy your app via the Azure Developer Cli (`azd`)
 
@@ -58,15 +58,15 @@ Microsoft advertise Aspire as being built on top of 4 pillars:
 
 - A new version of .NET (e.g. Framework / Core)
 - An application framework (e.g. ASP.NET Core, MAUI, WPF)
-- Something that's deployed\*
+- Something that's deployed
 
-*NOTE: \*While the AppHost is not deployed, client Integrations become part of your app. Service defaults becomes part of your app, so both of these ARE deployed. Dashboard can also optionally be deployed.*
+*NOTE: While the App Host is not deployed, client Integrations become part of your app. Service defaults becomes part of your app, so both of these ARE deployed. Dashboard can also optionally be deployed.*
 
 ## Inner Development Loop
 
 The C# AppHost is at the heart of .NET Aspire. It becomes the single entry point to run our application and orchestrates all projects and resources needed.
 
-In a Modular Monolith, I like to put this in a `Tools` directory:
+In a Modular Monolith, I like to put this in a `tools` directory:
 
 <div style={{ maxWidth: '500px', margin: '0 auto' }}>
 ![Tools Directory](/static/images/modular-monolith/structure-app-host.png)
@@ -113,7 +113,7 @@ Next we have the `MigrationService` project, which is responsible for running da
 
 Finally, we have the `WebApi` project, which is our main application. We are telling it to wait for the `MigrationService` to have completed before starting so that we can ensure our database is in a ready state.
 
-It's also common to have other infrastructure resources such as caches, message queues, and file storage. 
+It's also common to add other infrastructure resources such as caches, message queues, and file storage. 
 
 ## Observability
 
@@ -245,7 +245,7 @@ public static class Extensions
 }
 ```
 
-The aim of Service Defaults is to provide sensible defaults for our application. They configuration is an opinionated view of what should be common to most applications. The config is just a starting point and can be customised to suit your needs.
+The aim of `ServiceDefaults` is to provide sensible defaults for our application. The configuration is an opinionated view of what should be common to most applications. The config is just a starting point and can be customised to suit your needs.
 
 At a high level, the `ServiceDefaults` configures:
 
@@ -258,10 +258,10 @@ At a high level, the `ServiceDefaults` configures:
 
 Aspire integrations are pre-configured NuGet packages that provide observability, resiliency, and scalability. They often come in two flavours, hosting and client integrations.
 
-- **Hosting Integrations**: These are used to configure the C# AppHost to set up the resources needed for your application.
+- **Hosting Integrations**: These are used to configure the C# App Host to set up the resources needed for your application.
 - **Client Integrations**: These are used to configure your applications to use the resources provided by the hosting integrations. This often sets up defaults for observability, resiliency, and scalability.
 
-They are designed to be used with the C# AppHost, and are configured via the `ServiceDefaults`.
+They are designed to be used with the C# App Host, and are configured via the `ServiceDefaults`.
 
 ![Integrations](/static/images/modular-monolith/integrations.png)
 
