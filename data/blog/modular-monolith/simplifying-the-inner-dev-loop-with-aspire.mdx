@@ -3,13 +3,13 @@ title: Modular Monolith - Simplifying the Inner Development Loop with .NET Aspir
 date: '2025-01-12'
 tags: ['dotnet', 'architecture', 'modular-monolith-architecture', 'aspire', 'productivity']
 draft: false
-summary: TODO
-images: ['/static/images/modular-monolith/part2-banner.png']
+summary: .NET Aspire significantly simplifies the inner development loop by providing a unified dashboard, streamlined configuration, and powerful orchestration capabilities. With features like service discovery, health monitoring, and seamless cloud deployments, .NET Aspire removes much of the complexity traditionally associated with Modular Monolith development.
+images: ['/static/images/modular-monolith/banner-aspire.png']
 layout: PostLayout
 canonicalUrl: https://www.dandoescode.com/blog/modular-monolith/implementation-deep-dive
 ---
 
-![Banner](/static/images/modular-monolith/part2-banner.png)
+![Banner](/static/images/modular-monolith/banner-aspire.png)
 
 <TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
 
@@ -19,7 +19,7 @@ canonicalUrl: https://www.dandoescode.com/blog/modular-monolith/implementation-d
 
 In the [previous post](/blog/modular-monolith/implementation-deep-dive), we looked at the nuts and bolts of how to implement a Modular Monolith Architecture (MMA). In this post, we cover how we can streamline our inner development loop with .NET Aspire.
 
-## Overview (Pain)
+## Overview
 
 Getting started with a new project can be a daunting task. There are so many things to set up and configure, and it can be hard to know where to start. On a medium sized project, there might be applications for both the front-end and back-end, a database, plus other infrastructure. Each of these need to be set up and configured correctly, so they can communicate together. This can be a mannual and error prone process.
 
@@ -336,18 +336,8 @@ Amongst other things, some of the most helpful new features in Aspire include:
 
 IMHO .NET Aspire is a no brainer for any .NET application that has more than one moving 'piece'. If you're currently using `docker compose`, or something similar, I'd recommend giving Aspire a try.
 
-The tooling significantly simplifies the inner development loop by providing a unified dashboard, streamlined configuration, and powerful orchestration capabilities. With features like service discovery, health monitoring, and seamless cloud deployments, .NET Aspire removes much of the complexity traditionally associated with Modular Monolith or distributed application development.
+The tooling significantly simplifies the inner development loop by providing a unified dashboard, streamlined configuration, and powerful orchestration capabilities. With features like service discovery, health monitoring, and seamless cloud deployments, .NET Aspire removes much of the complexity traditionally associated with Modular Monolith development.
 
 What's particularly exciting is how .NET Aspire continues to evolve with .NET 9, introducing features that make local development even more productive. Whether you're building a new Modular Monolith or modernizing an existing application, Aspire provides a solid foundation that scales from development through to production.
 
 Let me know how you find the combination of Modular Monoliths and .NET Aspire.
-{/* ## Source Code
-
-- [github.com/danielmackay/dotnet-modular-monolith](https://github.com/danielmackay/dotnet-modular-monolith) */}
-
-## Resources
-
-{/* - [milanjovanovic.tech/blog/what-is-a-modular-monolith](https://www.milanjovanovic.tech/blog/what-is-a-modular-monolith)
-- [ardalis.com/introducing-modular-monoliths-goldilocks-architecture](https://ardalis.com/introducing-modular-monoliths-goldilocks-architecture/)
-- [Vertical Slice Architecture in .NET 8: Zero to Hero — Luke Parker](https://www.youtube.com/watch?v=-mGRtMjws_8)
-- [ErrorOr](https://github.com/amantinband/error-or) */}
