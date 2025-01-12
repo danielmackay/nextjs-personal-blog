@@ -1,0 +1,153 @@
+---
+title: Modular Monolith - Simplifying the Inner Development Loop with .NET Aspire
+date: '2025-01-12'
+tags: ['dotnet', 'architecture', 'modular-monolith-architecture', 'aspire', 'productivity']
+draft: false
+summary: TODO
+images: ['/static/images/modular-monolith/part2-banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/modular-monolith/implementation-deep-dive
+---
+
+![Banner](/static/images/modular-monolith/part2-banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+<ModularMonolithSeriesHeader />
+
+## Introduction
+
+In the [previous post](/blog/modular-monolith/implementation-deep-dive), we looked at the nuts and bolts of how to implement a Modular Monolith Architecture (MMA). In this post, we cover how we can streamline our inner development loop with .NET Aspire.
+
+## Overview (Pain)
+
+Getting started with a new project can be a daunting task. There are so many things to set up and configure, and it can be hard to know where to start. On a medium sized project, there might be applications for both the front-end and back-end, a database, plus other infrastructure. Each of these need to be set up and configured correctly, so they can communicate together. This can be a mannual and error prone process.
+
+This is especially true when working with a modular monolith architecture, where you have multiple modules that most likely have their own databases and infrastructure.
+
+Regardless of how complex the project is, the golden standard is to always be able to pull the code from the repository, run a single command, and have the project up and running on your local machine.
+
+## What is .NET Aspire?
+
+.NET Aspire is not one thing. I like to describe it as **tooling that helps us to build, debug and deploy distributed systems**. I used to be of the impression that Aspire was only good for Microservices. However, I've now come to the conclusion that it's useful for any .NET application that has more than one 'moving part'. This is especially true for Modular Monoliths 
+
+'Moving parts' could include:
+
+- Applications
+  - UI Frontends
+  - API Backends
+  - Background Processes
+  - Microservices
+- Infrastructure
+    - Database
+    - File Storage
+    - Cache
+    - Message Queue
+
+Microsoft advertise Aspire as being built on top of 4 pillars:
+
+- **Streamlined Inner Development Loop**: C# App Host, helps you to get up and running quickly, by providing a way to start and stop resources, run commands on resources, and wait for resources to be ready.
+- **Integrations**: Aspire provides a way to integrate with other infrastructure (via pre-configured NuGet packages), such as docker containers. The Aspire client integrations (e.g. `Aspire.Microsoft.EntityFrameworkCore.SqlServer`) configure defaults to provide Observability, resiliency, and scalability.
+- **Developer Dashboard**: Observability how your app is running via Open Telemetry metrics, traces, and logs
+- **Deployment**: Easily provision cloud resources and deploy your app via the Azure Developer Cli (`azd`)
+
+![Aspire](/static/images/modular-monolith/aspire.png)
+
+
+### What is it NOT?
+
+- A new version of .NET (e.g. Framework / Core)
+- An application framework (e.g. ASP.NET Core, MAUI, WPF)
+- Something that's deployed\*
+
+*NOTE: \*While the AppHost is not deployed, client Integrations become part of your app. Service defaults becomes part of your app, so both of these ARE deployed. Dashboard can also optionally be deployed.*
+
+## Inner Development Loop
+
+The C# AppHost is at the heart of .NET Aspire. It becomes the single entry point to run our application and orchestrates all projects and resources needed.
+
+In a Modular Monolith, I like to put this in a `Tools` directory:
+
+<div style={{ maxWidth: '500px', margin: '0 auto' }}>
+![Tools Directory](/static/images/modular-monolith/structure-app-host.png)
+</div>
+
+In my Modular Monolith, `Program.cs` in the AppHost looks like this:
+
+```cs
+var builder = DistributedApplication.CreateBuilder();
+
+var sqlServer = builder
+    .AddSqlServer("sql")
+    .WithLifetime(ContainerLifetime.Persistent);
+
+var warehouseDb = sqlServer.AddDatabase("warehouse");
+var catalogDb = sqlServer.AddDatabase("catalog");
+var customersDb = sqlServer.AddDatabase("customers");
+var ordersDb = sqlServer.AddDatabase("orders");
+
+var migrationService = builder.AddProject<MigrationService>("migrations")
+    .WithReference(warehouseDb)
+    .WithReference(catalogDb)
+    .WithReference(customersDb)
+    .WithReference(ordersDb)
+    .WaitFor(sqlServer);
+
+builder
+    .AddProject<WebApi>("api")
+    .WithExternalHttpEndpoints()
+    .WithReference(warehouseDb)
+    .WithReference(catalogDb)
+    .WithReference(customersDb)
+    .WithReference(ordersDb)
+    .WaitForCompletion(migrationService);
+
+builder
+    .Build()
+    .Run();
+```
+
+In this example above you can see we are setting up a single SQL Server, with 4 databases. Notice the use of `WithLifetime(ContainerLifetime.Persistent)` which configures our container to stick around between restarts. This hugely speeds up our inner dev loop.
+
+Next we have the `MigrationService` project, which is responsible for running database migrations. This will create the schema for all databases, and seed them with test data. The call to `WaitFor(sqlServer)` is important, as it tells the `MigrationService` to wait for the SQL Server to be ready before running. We are also passing in references to all databases. As Aspire is creating the SQL Server with a random port, the connection string will be different each time. By passing in the reference to the database, the `MigrationService` can easily get the connection string from the database without any manual configuration. Nice! 😎
+
+Finally, we have the `WebApi` project, which is our main application. We are telling it to wait for the `MigrationService` to have completed before starting so that we can ensure our database is in a ready state.
+
+It's also common to have other infrastructure resources such as caches, message queues, and file storage. 
+
+## Observability
+
+Once we have our application up and running, the next step is to test and observe how it's running. Aspire provides a developer dashboard that gives us insights into how our application is running. This includes metrics, traces, and logs.
+
+TODO: Service Defaults
+
+## Integrations
+
+## Deployment
+
+## What's new in Aspire for .NET 9?
+
+Amongst other things, some of the most helpful new features in Aspire include:
+
+- Ability to start and stop resources from the dashboard
+- Persistence container lifetimes
+- Ability to wait for a resource to be ready (`WaitFor()`) to to have finished running (`WaitForCompletion()`)
+- Ability to run a command on a resource (e.g. re-creating a database, or clearing a cache)
+- Control over how a resource gets deployed (e.g. a database could be deployed to an Azure SQL DB, or an Azure Container App)
+
+## Conclusion
+
+IMHO Aspire is a no brainer for any .NET application that has more than one moving 'piece'. If you're currently using `docker compose`, or something similar, I'd recommend giving Aspire a try. 
+
+
+
+{/* ## Source Code
+
+- [github.com/danielmackay/dotnet-modular-monolith](https://github.com/danielmackay/dotnet-modular-monolith) */}
+
+## Resources
+
+{/* - [milanjovanovic.tech/blog/what-is-a-modular-monolith](https://www.milanjovanovic.tech/blog/what-is-a-modular-monolith)
+- [ardalis.com/introducing-modular-monoliths-goldilocks-architecture](https://ardalis.com/introducing-modular-monoliths-goldilocks-architecture/)
+- [Vertical Slice Architecture in .NET 8: Zero to Hero — Luke Parker](https://www.youtube.com/watch?v=-mGRtMjws_8)
+- [ErrorOr](https://github.com/amantinband/error-or) */}

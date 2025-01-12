@@ -19,8 +19,12 @@ const ModularMonolithSeriesHeader = () => {
             Part 2: Modular Monoliths - Implementation Deep Dive
           </Link>
         </li>
-
-        <li>Part 3: Coming Soon</li>
+        <li>
+          <Link href="/blog/modular-monolith/simplifying-the-inner-dev-loop-with-aspire">
+            Part 3: Modular Monoliths - Simplifying the Inner Dev Loop with .NET Aspire
+          </Link>
+        </li>
+        <li>Part 4: Coming Soon</li>
       </ul>
     </>
   )
