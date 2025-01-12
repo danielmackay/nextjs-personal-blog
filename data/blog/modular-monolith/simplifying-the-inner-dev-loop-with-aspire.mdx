@@ -119,11 +119,208 @@ It's also common to have other infrastructure resources such as caches, message 
 
 Once we have our application up and running, the next step is to test and observe how it's running. Aspire provides a developer dashboard that gives us insights into how our application is running. This includes metrics, traces, and logs.
 
-TODO: Service Defaults
+The dashboard is accessible via a web browser, and can be run locally or deployed to the cloud:
+
+![Dashboard](/static/images/modular-monolith/dashboard-resources.png)
+
+The resources tab shows us all of our services. These could be projects that we are maintaining or docker images. For our database, you will see we have a container named 'sql' and four database resources that are attached to it (the attachments are not shown). From here we can browse our application (UI or API), restart the resource, or navigate to the console logs.
+
+The console logs are particularly useful for debugging. They show us the output of the console for each resource. 
+
+The screenshot below shows the console logs for the `MigrationService` project. You can see that it's running the migrations for the `warehouse` database.
+
+![Console Logs](/static/images/modular-monolith/dashboard-console.png)
+
+The structured logs shows the same data as the console logs, but in a more structured format. This is useful for filtering and searching. If you've ever used Serilog or Seq, you'll be familiar with this format.
+
+![Structured Logs](/static/images/modular-monolith/dashboard-structured.png)
+
+Traces allows us to see the flow of a request through our application. This is useful for debugging performance issues, or for understanding how our application is working.
+
+![Traces](/static/images/modular-monolith/dashboard-trace-overview.png)
+
+We can drill into a specific trace to get a detailed breakdown of what happened. This includes the duration of each step, and any logs that were generated.
+
+![Trace Detail](/static/images/modular-monolith/dashboard-trace-details.png)
+
+Lastly, we have metrics which allow us to see measurements of our application. This could be things like the number of requests per second, the average response time, or the number of errors.
+
+![Metrics](/static/images/modular-monolith/dashboard-metrics.png)
+
+All of the above is driven by Open Telemetry, which is a vendor-neutral standard for observability. This means that we can easily integrate with other observability tools, such as Prometheus, Grafana, or New Relic, or Application Insights.
+
+This is wired up in our code via the `ServiceDefaults`. A typical `ServiceDefaults` file might look like this:
+
+```cs
+public static class Extensions
+{
+    public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        builder.ConfigureOpenTelemetry();
+
+        builder.AddDefaultHealthChecks();
+
+        builder.Services.AddServiceDiscovery();
+
+        builder.Services.ConfigureHttpClientDefaults(http =>
+        {
+            // Turn on resilience by default
+            http.AddStandardResilienceHandler();
+
+            // Turn on service discovery by default
+            http.AddServiceDiscovery();
+        });
+
+        return builder;
+    }
+
+    public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        builder.Logging.AddOpenTelemetry(logging =>
+        {
+            logging.IncludeFormattedMessage = true;
+            logging.IncludeScopes = true;
+        });
+
+        builder.Services
+            .AddOpenTelemetry()
+            .WithMetrics(metrics =>
+            {
+                metrics
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation();
+            })
+            .WithTracing(tracing =>
+            {
+                tracing
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation();
+            });
+
+        builder.AddOpenTelemetryExporters();
+
+        return builder;
+    }
+
+    private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
+
+        if (useOtlpExporter)
+        {
+            builder.Services.AddOpenTelemetry().UseOtlpExporter();
+        }
+
+        return builder;
+    }
+
+    public static TBuilder AddDefaultHealthChecks<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        builder.Services.AddHealthChecks()
+            // Add a default liveness check to ensure app is responsive
+            .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+
+        return builder;
+    }
+
+    public static WebApplication MapDefaultEndpoints(this WebApplication app)
+    {
+        // Adding health checks endpoints to applications in non-development environments has security implications.
+        // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
+        if (app.Environment.IsDevelopment())
+        {
+            // All health checks must pass for app to be considered ready to accept traffic after starting
+            app.MapHealthChecks("/health");
+
+            // Only health checks tagged with the "live" tag must pass for app to be considered alive
+            app.MapHealthChecks("/alive", new HealthCheckOptions
+            {
+                Predicate = r => r.Tags.Contains("live")
+            });
+        }
+
+        return app;
+    }
+}
+```
+
+The aim of Service Defaults is to provide sensible defaults for our application. They configuration is an opinionated view of what should be common to most applications. The config is just a starting point and can be customised to suit your needs.
+
+At a high level, the `ServiceDefaults` configures:
+
+- Open Telemetry for metrics, traces, and logs
+- Health checks
+- Service Service
+- Resiliency for HTTP clients (e.g. retries to handle transient errors)
 
 ## Integrations
 
+Aspire integrations are pre-configured NuGet packages that provide observability, resiliency, and scalability. They often come in two flavours, hosting and client integrations.
+
+- **Hosting Integrations**: These are used to configure the C# AppHost to set up the resources needed for your application.
+- **Client Integrations**: These are used to configure your applications to use the resources provided by the hosting integrations. This often sets up defaults for observability, resiliency, and scalability.
+
+They are designed to be used with the C# AppHost, and are configured via the `ServiceDefaults`.
+
+![Integrations](/static/images/modular-monolith/integrations.png)
+
+The SQL Server hosting integration is setup via:
+
+```cs
+var sqlServer = builder
+    .AddSqlServer("sql")
+    .WithLifetime(ContainerLifetime.Persistent);
+
+var catalogDb = sqlServer.AddDatabase("catalog");
+```
+
+The SQL Server client integration is setup via:
+
+```cs
+internal static class DependencyInjection
+{
+    internal static void AddPersistence(this IHostApplicationBuilder builder)
+    {
+        builder.AddSqlServerDbContext<CatalogDbContext>("catalog",);
+    }
+}
+```
+
+This code comes from the `Aspire.Microsoft.EntityFrameworkCore.SqlServer` package and configures the following in the `CatalogDbContext`:
+
+- Connection pooling
+- Retries
+- Health checks
+- Logging
+- Telemetry
+
+Again, all of these configurations are just a starting point and can be customised to suit your needs.
+
+You might also noticed that the same string `catalog` is used in both the hosting and client integrations. This is not a coincidence. The hosting integration creates a resource with the name "catalog", and the client integration uses this name to find the resource. This is how the client integration knows how to connect to the database.
+
 ## Deployment
+
+Deployment is the final piece of the puzzle. Aspire provides a way to easily provision cloud resources and deploy your application via the Azure Developer Cli (`azd`).
+
+Once you have the Azure Developer Cli installed, you need to first initialize your application via `azd init`. This will inspect your Aspire App Host and create several files needed for deployment.
+
+The second command to run is `azd up` which deploy your Modular Monolith to Azure Container Apps. This works as follows:
+
+- Confirm Azure region and subscription
+- Create all infrastructure needed
+  - Resource group
+  - Managed identities
+  - Azure SQL server & DB
+  - Container app environment
+  - Container apps (one for each deployable)
+  - Container registry
+  - Log analytics workspace
+- Create docker images for each application and push them to the container registry
+
+WOW, that's a lot of heavy lifting! 😮
+
+This approach can be great as a starting point or to push prototypes to Azure, but you may also want to generate your bicep files manually to have more control over how your Azure resources are provisioned.
 
 ## What's new in Aspire for .NET 9?
 
@@ -137,10 +334,13 @@ Amongst other things, some of the most helpful new features in Aspire include:
 
 ## Conclusion
 
-IMHO Aspire is a no brainer for any .NET application that has more than one moving 'piece'. If you're currently using `docker compose`, or something similar, I'd recommend giving Aspire a try. 
+IMHO .NET Aspire is a no brainer for any .NET application that has more than one moving 'piece'. If you're currently using `docker compose`, or something similar, I'd recommend giving Aspire a try.
 
+The tooling significantly simplifies the inner development loop by providing a unified dashboard, streamlined configuration, and powerful orchestration capabilities. With features like service discovery, health monitoring, and seamless cloud deployments, .NET Aspire removes much of the complexity traditionally associated with Modular Monolith or distributed application development.
 
+What's particularly exciting is how .NET Aspire continues to evolve with .NET 9, introducing features that make local development even more productive. Whether you're building a new Modular Monolith or modernizing an existing application, Aspire provides a solid foundation that scales from development through to production.
 
+Let me know how you find the combination of Modular Monoliths and .NET Aspire.
 {/* ## Source Code
 
 - [github.com/danielmackay/dotnet-modular-monolith](https://github.com/danielmackay/dotnet-modular-monolith) */}
