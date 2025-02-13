@@ -1,0 +1,200 @@
+---
+title: Raycast - The Ultimate Productivity Tool for MacOS
+date: '2025-02-13'
+tags: ['raycast', 'mac', 'productivity']
+draft: false
+summary: One of the tools I've been becoming more and more infactuated with recently is Raycast. Raycast is a productivity tool for MacOS that lets you control your tools with a few keystrokes.  It's like Spotlight on steroids.  It's a great way to quickly access your tools and data without having to leave the keyboard. In this post, we'll take a look at how to get started with Raycast and how I use it to be more productive as a software developer.
+images: ['/static/images/raycast/banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/raycast-the-ultimate-productivity-tool-for-macos
+---
+
+![Banner](/static/images/raycast/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## Introduction
+
+After using Windows for most of my career, I've been using a MacBook as my daily driver for the past 10 months. During that time, I've slowly been filling the gaps of all the windows tools I used to use to stay productive.  One of the tools I've been becoming more and more infactuated with recently is [Raycast](https://www.raycast.com/).
+
+Raycast is a productivity tool for MacOS that lets you control nearly anything with a few keystrokes.  It's like Spotlight on steroids.  It's a great way to quickly access your tools and data without having to leave the keyboard.
+
+In this post, we'll take a look at how to get started with Raycast and how I use it to be more productive as a Software Developer.
+
+## Raycast Basics & Setup
+
+After downloading Raycast from the [Raycast website](https://www.raycast.com/), the first thing I do is setup the keyboard shortcut to open Raycast.  The default shortcut is `⌘ + Space`, which is the same as Spotlight.  The settings will guide you through the process of overriding spotlight.
+
+![Raycast Settings](/static/images/raycast/image.png)
+
+When you open Raycast, you'll see a search bar at the top of the window.  You can start typing to search for a command or use the arrow keys to navigate the list of commands.  Pressing `Enter` will execute the selected command.
+
+After using it for a while, Raycast will start to remember the commands you use most often suggest them at the top of the list. It seems to do this very intelligently. 🤓
+
+![Raycast Search](/static/images/raycast/image2.png)
+
+### Hotkeys
+
+Bringing up Raycast and searching for apps works very well. But as Developers often we have a handful of apps that we use all the time.  Raycast lets us assign hotkeys to these apps. However, before we start assigning hotkeys, there is a recently released feature that makes his even easier - Hyper Key.
+
+![Raycast Hyper Key](/static/images/raycast/image3.png)
+
+Hyper Key allows you to assign any one key, that when pressed, will simulate a press of all 4 modifer keys (⇧, ⌃, ⌥, ⌘) at the same time.  This guarantees that you won't have any conflicts with other shortcuts.  I've assigned mine to the Right Command (⌘) key, which I never use. This let's me to continue using the Left Command (⌘) key for existing shortcuts.
+
+Once we have the Hyper Key configured, we can now use it to setup hotkeys for our commonly used apps. To do this find the application you want to assign a hotkey to in Raycast. Use `⌘ + K` to bring up the actions for the app. Then navigate to 'Configure Application'.
+
+![Raycast Configure Command](/static/images/raycast/image4.png)
+
+From there you can easily assign a hotkey to the app as shown below.
+
+![Raycast Hotkey](/static/images/raycast/image5.png)
+
+Here you can see all the hotkeys I've assigned to my favorite apps.  You may also notice some configured aliases which we'll talk about next.
+
+![Raycast Hotkeys](/static/images/raycast/image6.png)
+
+*NOTE: The ♦︎ symbol indicates the shortcut is using the Hyper Key.*
+
+### Aliases
+
+Hotkeys are great for launching applications or commands without brining up Raycast. Aliases provide a way to quickly search for commands within Raycast. They are configured similarly to hotkeys.
+
+For example, I've bound `smi` to "Search Menu Items".
+
+![Raycast Aliases](/static/images/raycast/image7.png)
+
+This allows me to quickly search for menu items in any application.  For example, creating a pull request in Rider.
+
+![Raycast Search Menu Items](/static/images/raycast/image8.png)
+
+*NOTE: You'll also see that when you search for an application, Raycast will also display the hotkeys and aliases, to help you learn them for next time.*
+
+
+## Raycast Built-in Commands
+
+While searching and launching apps is the bread and butter of Raycast, it has a lot of built-in commands that can help you become even more productive.
+
+### Focus Session
+
+Focus Session is a newly released command in Raycast. It's like a pomodoro timer on steroids. Not only does it give you a timer containing a description of what you should be working on, but it also blocks distracting websites and apps.  You can also configure the blocked apps to automatically restart once your session is finished.
+
+To start a Focus Session, simply type `focus` in Raycast and press `Enter`.
+
+![Raycast Focus Session](/static/images/raycast/image9.png)
+
+What was I supposed to be working on again? Oh yeah, writing this blog post.
+
+![Raycast Focus Session](/static/images/raycast/image10.png)
+
+Once the focus session starts all the blocked apps will be killed. If you go off the rails and try to launch a blocked app, you'll be kindly reminded you shouldn't do this, but also be provided with a way to override in case it's really important. They've thought of everything! 🤔
+
+![Raycast Blocked App](/static/images/raycast/image11.png)
+
+If I was to only use two features of Raycast I would choose Hotkeys and Focus Sessions. I've found the combination of these two to be amazingly productive. 👑
+
+### Calendar / My Schedule
+
+I have a lot of meetings during the day on Microsoft Teams. My Schedule allows me to see all of my upcoming meetings easily.
+
+![My Schedule](/static/images/raycast/image12.png)
+
+While this is handy what I really love about this is that if I'm using Raycast 10 minutes before the meeting, it will surface that meeting and allow me to join right from Raycast. But even better, it quickly opens my camera so I can check I don't have any food on my face before joining. Super nice! 🍕
+
+### Clipboard History
+
+MacOS doesn't seem to have a clipboard history by default. Raycast provides a clipboard history that can be accessed by typing `clip` in Raycast. The clipboard history provides a powerful search that looks at not only the file name, but also the content in the image via OCR. 🤯
+
+![Clipboard History](/static/images/raycast/image13.png)
+
+### Screenshot Search
+
+I find the Screenshot search to be quite handy. Especially when writing blog posts like this. I have this bound to a `ss` alias so I can quickly search for screenshots.
+
+![Screenshot Search](/static/images/raycast/image14.png)
+
+### Quicklinks
+
+Quicklinks are handy for...well...quickly accessing links. You can add any link you want to Quicklinks and then search for them in Raycast. I've found these to be useful to access the current project I'm working on in GitHub. I often want to get to the repo fast, or see the current state of our Sprint Board.
+
+![Quicklinks](/static/images/raycast/image15.png)
+
+Quicklinks can also have dynamic placeholders. For example, I could create a custom URL to search Twitter for a specific hashtag.
+
+### Calculator
+
+Most calculators are quite mundane. Raycast's calculator is anything but. It's a full-featured calculator that can handle all sorts of calculations. You don't even need to launch a command to use it. Just type your calculation in Raycast will do the rest.
+
+For example, easily convert between units:
+
+![Calculator](/static/images/raycast/image16.png)
+
+Or quickly see the timezone of your colleagues:
+
+![Calculator](/static/images/raycast/image17.png)
+
+And as you'd come to expect by now, the calculator has full history and search capabilities.
+
+### Emoji Picker
+
+The MacOS emoji picker is OK, but Raycast's emoji picker is way better. It has a semantic search feature that makes it easy to find the emoji you're looking for. I've used a `⌘ + .` hotkey to bring up the emoji picker from anywhere.
+
+![Emoji Picker](/static/images/raycast/image18.png)
+
+### Confetti!
+
+Last but not least of the built in commands is the confetti command. It's a fun little command that lets you celebrate your wins (even if nobody is watching 🙈). Try it out!
+
+## Best Extensions for Software Developers
+
+The above commands are OOTB. Raycast also has it's own [Store](https://www.raycast.com/store) where you can download extensions to further enhance your productivity. Here are some of the best extensions I've found.
+
+### Code Images
+
+Ever wanted to share a snippet of code publicly in a visually appealing way? [Code Images](https://www.raycast.com/garrett/ray-so) does that for you. Add the code into Raycast:
+
+![Code Images](/static/images/raycast/image19.png)
+
+And it will generate a beautiful image that you can tweak and share with others.
+
+![Code Images](/static/images/raycast/image20.png)
+
+### Brew
+
+Brew is a package manager for MacOS. The [Brew](https://www.raycast.com/nhojb/brew) extension allows you to search for packages and install them right from Raycast. It also provides a list of all the packages you have installed.
+
+### Port Manager
+
+As a develop that uses Docker, I often have port conflicts and it's not always easy to see which sneaky application is holding the port ransom. The [Port Manager](https://www.raycast.com/lucaschultz/port-manager) extension allows you to quickly see what ports are in use and which application is using them.
+
+### Docker
+
+The [Docker](https://www.raycast.com/priithaamer/docker) extension allows you to manage your Docker containers right from Raycast. You can start, stop, and remove containers with ease.
+
+### Coffee
+
+Ever been presenting on stage and your computer has gone to sleep? The [coffee](https://www.raycast.com/mooxl/coffee) extension won't stop your attendees from faling asleep, but it will keep your computer awake. 🥱
+
+## Pro Version
+
+You might noticed I haven't mentioned the price of Raycast yet.  That's because it's free!  But there is a pro version that gives you access to some additional features.  Some of the features included in the Pro version are:
+
+- AI
+- Notes
+- Sync Settings
+- Share with Team
+
+I haven't found the need to upgrade to the Pro version yet, but I can see the value in the AI feature.
+
+## Summary
+
+Phew, that was a lot to go through!  Raycast is a fantastic productivity tool for MacOS. I'm constantly finding new ways to use it or handy new extensions which allows me to deliver features to my clients oh so much faster. ⚡
+
+I hope you've found this introduction to Raycast useful.  If you have any tips on how to use Raycast or favourite extensions, I'd love to hear about them in the comments below.
+
+## Resources
+
+- [Raycast](https://www.raycast.com/)
+- [Raycast Store](https://www.raycast.com/store)
+- [Raycast Blog](https://www.raycast.com/blog)
+- [Theo - I can't use a Mac without this app](https://www.youtube.com/watch?v=dQwJQnOxyVk)
+
