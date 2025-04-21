@@ -1,0 +1,332 @@
+---
+title: Model Context Protocol - Easily Extend LLMs with Existing APIs
+date: '2025-04-21'
+tags: ['mcp', 'llm', 'api', 'dotnet', 'ai']
+draft: false
+summary: The Model Context Protocol (MCP) is an open standard that allows developers to extend LLMs by integrating them with existing APIs or local resources. This blog post explores the limitations of LLMs, the benefits of using MCP, and how it can be implemented in with an existing API.
+images: ['/static/images/mcp/banner.png']
+layout: PostLayout
+canonicalUrl: https://www.dandoescode.com/blog/mcp-easily-extend-llms-with-existing-apis
+---
+
+![Banner](/static/images/mcp/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## Introduction
+
+Use of AI is omnipresent in our daily lives, from chatbots to virtual assistants, and now, agents. The rapid advancement of Large Language Models (LLMs) has made it possible to create intelligent systems that can understand and generate human-like text. However, these models often have limitations in terms of knowledge and capabilities.
+
+In this blog post, we will explore the Model Context Protocol (MCP), an open standard that allows developers to extend LLMs by integrating them with existing APIs. We will discuss the limitations of LLMs, the benefits of using MCP, and how it can be implemented in various applications.
+
+## LLM Limitations
+
+There are two big limitations of LLMs:
+
+1. **Knowledge**: LLMs are trained on a fixed dataset, which means they may not have access to the most up-to-date information or specific domain knowledge. This can lead to inaccuracies or outdated responses.
+2. **Capabilities**: LLMs are not inherently capable of performing complex tasks or integrating with external systems. They can generate text, but they cannot execute actions or retrieve data from APIs without additional support.
+
+## Extending LLM Capabilities
+
+To overcome these limitations, developers can use various methods to extend the capabilities of LLMs. Here are three possible options.
+
+### Option 1 - Retrieval Augmented Generation (RAG)
+
+Retrieval Augmented Generation (RAG) is a technique that combines LLMs with external data sources to improve the quality and relevance of generated text. This can be achieved by using a retrieval system to fetch relevant information from a database or knowledge base and then incorporating that information into the prompt.
+
+✅ simple<br/>
+✅ augments LLM knowledge with external data<br/>
+❌ subject to token limits<br/>
+❌ doesn’t extend capabilities<br/>
+
+### Option 2 – Custom GPT with Open API
+
+OpenAI has allowed developers to create custom GPTs that can be tailored to specific use cases. This is done by providing an OpenAPI specification that describes the API endpoints and their functionality. This is a great way to extend the capabilities of LLMs by allowing them to call functions and retrieve data from external APIs.
+
+✅ query data from APIs<br/>
+✅ call functions from APIs<br/>
+⚠️ not simple (but not too bad)<br/>
+❌ not standardized (differs across chat clients - ChatGPT, Gemini, Copilot, etc)<br/>
+
+The biggest downside of this approach is that the API integration needs to be done once per chat client.
+
+### Option 3 – Semantic Kernel Plugins
+
+Semantic Kernel is a framework that allows developers to create plugins for LLMs. These plugins can be used to extend the capabilities of LLMs by providing additional functionality, such as data retrieval or complex computations, or 3rd party integrations.
+
+✅ query data from APIs <br/>
+✅ call functions from APIs <br/>
+❌ WAY <br/>
+❌ TOO<br/>
+❌ MUCH<br/>
+❌ CODE 😭<br/>
+
+The main downside of this approach is that it requires a significant amount of code and effort to implement, including a UI that sits on top of Semantic Kernel.
+
+## Model Context Protocol (MCP)
+
+The Model Context Protocol (MCP) is an open standard created by Anthropic that allows developers to extend LLMs by integrating them with servers that internally access local resources or external APIs. It provides a standardized way to define and interact with APIs, making it easier to create intelligent systems that can leverage the capabilities of LLMs.
+
+The goal of MCP is to make an AI-First API, as opposed to taking a traditional REST API and bolting it onto the size of an LLM.
+
+MCP is supported by a growing number clients, including VS Code, Cursor, and Claude Desktop. 
+
+A [recent article](https://www.linkedin.com/pulse/what-mcp-model-context-protocol-calum-simpson-dyrwc/) by my colleague [Calum Simpson](https://www.linkedin.com/in/calumjs/?originalSubdomain=au) describes why MCP is a big deal in one succinct sentence:
+
+> MCP shifts the integration effort from once per client, to once per server
+
+
+### Architecture
+
+<figure>
+  <img src="/static/images/mcp/architecture.png" alt="Architecture of MCP" />
+  <figcaption>Figure: Architecture of MCP ([source](https://devblogs.microsoft.com/blog/microsoft-partners-with-anthropic-to-create-official-c-sdk-for-model-context-protocol))</figcaption>
+</figure>
+
+### Capabilities
+
+MCP provides a set of capabilities that allow developers to extend LLMs in various ways. These capabilities include:
+
+- **Tools**: Allows LLMs to call external APIs and functions, enabling them to perform complex tasks or  retrieve data from various sources.
+- **Resources**: Enables LLMs to access and read data from external sources, such as databases or knowledge bases, improving their knowledge and accuracy.
+- **Prompts**: Allows LLMs to generate prompts based on external data, enabling them to create more relevant and context-aware responses.
+- **Sampling**: Enables MCP to make requests from the server to the client LLM (e.g. chat completion). This gives MCP LLM capabilities without having to manage models or access directly.
+
+## Implementing MCP in .NET
+
+Righto, so how do we implement MCP in .NET?
+
+### Step 1 - Create an API
+
+We could integrate with any existing API, but In order to save time and keep saying simple will use the [SSW Clean Architecture template](https://github.com/SSWConsulting/SSW.CleanArchitecture).
+
+```bash
+dotnet new install SSW.CleanArchitecture.Template
+mkdir dotnet-mcp-hero
+cd dotnet-mcp-hero
+mkdir api
+cd api
+dotnet new ssw-ca --name HeroApi --output .\
+```
+
+Then to run the solution:
+
+```bash
+cd Tools\AppHost
+dotnet run
+```
+
+Aspire will spin up a DB server, create a DB schema, populate it with data and run the API.
+
+![Figure: Aspire](/static/images/mcp/aspire.png)
+
+We can then use Scalar to query the API to see the hero data:
+
+![Figure: Scalar](/static/images/mcp/scalar.png)
+
+### Step 2 - Create an MCP Server
+
+We can use a simple console app for our MCP server:
+
+```bash
+mkdir mcp
+cd mcp
+dotnet new console --name HeroMcp --output .\
+```
+
+After creating the console app, replace the `Program.cs` file with the following code:
+
+```cs
+var builder = Host.CreateApplicationBuilder(args);
+builder.Logging.AddConsole(consoleLogOptions =>
+{
+    // Configure all logs to go to stderr
+    consoleLogOptions.LogToStandardErrorThreshold = LogLevel.Trace;
+});
+
+builder.Services
+    .AddMcpServer()
+    .WithStdioServerTransport()
+    .WithToolsFromAssembly();
+
+await builder.Build().RunAsync();
+```
+
+Importantly, we need to call `AddMcpServer()` to register the MCP services. `WithStdioServerTransport()` is used to create a server that communicates with the client over standard input and output. `WithToolsFromAssembly()` is used to register the tools automatically from the assembly.
+
+### Step 3 - Integrate the API
+
+This is where the magic happens. 🧙‍♂️ 
+
+We need to create an MCP server that will integrate with our API. The easiest way to communicate with our API is to generate a client from the OpenAPI spec. [Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview) is an excellent tool for this.
+
+```bash
+dotnet tool install -g Microsoft.Kiota.Cli
+dotnet kiota generate --openapi https://localhost:7255/openapi/v1.json --language csharp --class-name HeroClient --clean-output --additional-data false
+```
+
+This will generate the API client in the `output` directory based on the latest OpenAPI specification:
+
+![Figure: Kiota](/static/images/mcp/kiota.png)
+
+Then we can start implementing our MCP tools. We can implement the `GetHeroesTool` as follows:
+
+```csharp
+[McpServerToolType]
+public static class GetHeroesTool
+{
+    [McpServerTool, Description("Get all heroes from the API.")]
+    public static async Task<string> GetHeroes(HeroClient client)
+    {
+        try
+        {
+            var heroes = await client.Api.Heroes.GetAsync();
+
+            if (heroes == null || heroes.Count == 0)
+                return "No heroes found.";
+
+            return JsonSerializer.Serialize(heroes);
+        }
+        catch (Exception ex)
+        {
+            return $"Error retrieving heroes: {ex.Message}";
+        }
+    }
+}
+```
+
+And the `CreateHeroTool` as follows:
+
+```csharp
+[McpServerToolType]
+public static class CreateHeroTool
+{
+    [McpServerTool, Description("Create a new hero.")]
+    public static async Task<string> CreateHero(
+        [Description("hero name")]string name,
+        [Description("hero alias")]string alias,
+        [Description("power name")]string powerName,
+        [Description("power level")]int powerLevel,
+        HeroClient client)
+    {
+        try
+        {
+            var command = new CreateHeroCommand
+            {
+                Name = name,
+                Alias = alias,
+                Powers = [new CreateHeroPowerDto { Name = powerName, PowerLevel = powerLevel }]
+            };
+
+            await client.Api.Heroes.PostAsync(command);
+            return $"Hero {name} ({alias}) successfully created with power level {powerLevel}";
+        }
+        catch (Exception ex)
+        {
+            return $"Error creating hero: {ex.Message}";
+        }
+    }
+}
+```
+
+The `[McpServerToolType]` attribute is used to locate MCP tools, and the `[McpServerTool]` attribute is used to register the specific tool with the MCP server. The `[Description]` attributes are important as the provide context to the LLM when it is deciding which tool to use.
+
+I followed the same process for the other APIs. The complete version can be found [here](https://github.com/danielmackay/dotnet-mcp-hero).
+
+### Step 4 - Setup VS Code client
+
+This step is relatively simple. While there are many clients available, I chose to use VS Code as MCP support was well documented.
+
+We'll need to create a `mcp.json` file in the `.vscode` directory:
+
+```json
+{
+    "inputs": [],
+    "servers": {
+        "HeroMcp": {
+            "type": "stdio",
+            "command": "dotnet",
+            "args": [
+                "run",
+                "--project",
+                "//{PATH}//dotnet-mcp-hero//Mcp"
+            ]
+        }
+    }
+}
+```
+
+This lets VS Code know about our MCP server. Once we've added the tool to our agent session, we can use the MCP server to call the API.
+
+![Figure: VS Code MCP](/static/images/mcp/mcp-config.png)
+
+We need to use 'agent', not 'ask' or 'edit' in Copilot:
+
+![Figure: VS Code MCP](/static/images/mcp/copilot.png)
+
+### Step 5 - Test
+
+Now for the fun part! 🤩 
+
+First lets see if we can create a hero:
+
+```prompt
+create a new hero called black widow
+```
+
+Result:
+
+![Figure: Create Hero](/static/images/mcp/mcp-create-hero.png)
+
+We can see that the MCP server has created a new hero called Black Widow with a power level of 9 and a power called "Master Spy".
+
+We can also use the MCP server to get all heroes:
+
+```prompt
+Get all heroes and output the result as a table
+```
+
+Result: 
+
+![Figure: Get Heroes](/static/images/mcp/mcp-get-heroes.png)
+
+Interestingly, we also get some insightful information from Copilot:
+
+```prompt
+As you can see, the database includes 21 heroes in total, with some heroes having multiple versions with different power levels and abilities. The Black Widow hero you created is listed with her full name "Natasha Romanoff", a power level of 9, and her "Master Spy" power also rated at level 9.
+
+Storm has the highest power level at 19, followed by Aquaman at 18. There's a good variety of heroes with different abilities and power levels that could be assembled into different teams based on mission requirements.
+```
+
+The lightbulb moment for me was when I asked copilot to add 'black widow' to the 'avengers' team. The agent created a plan combining the use of several tools to complete the task. First copilot used the `GetHeroesTool` to find 'black widow'. It then used the `GetTeamsTool` to find the 'avengers' team. Finally, it used the `AddHeroToTeamTool` to add 'black widow' to the 'avengers' team. So clever! 🤯
+
+## What's still missing from MCP?
+
+It's still early days for MCP servers. Most of the documentation leans towards running local MCP servers (either via code or via Docker). Remote servers will be coming soon, but for .NET that likely won't arrive until .NET 10 when [Server Sent Events](https://youtu.be/96lKoqQXbf4?si=U7EBJjAVFGAdm-ce) are supported.
+
+Discovery of MCP servers is currently a disjointed process. There is no central list, and I imagine some sort of 'store' will be created to allow users to find and install MCP servers.
+
+## Source Code
+
+The complete source code for this blog post can be found [here](https://github.com/danielmackay/dotnet-mcp-hero)
+
+## Summary
+
+The Model Context Protocol (MCP) represents a breakthrough in extending LLM capabilities by providing a standardized way to connect AI models with existing APIs or local resources. While traditional approaches like RAG, Custom GPTs, and Semantic Kernel offer partial solutions, MCP stands out by shifting integration from "once per client" to "once per server," dramatically reducing implementation complexity. In our superhero API example, we saw how MCP enabled an LLM to intelligently combine multiple tools to complete complex tasks, demonstrating its potential to revolutionize AI-API integration.
+
+Though still in early development with current limitations around remote servers and discovery mechanisms, MCP's promise is clear:
+
+> MCP will do for AI what REST APIs did for the Web. 
+
+By creating a universal standard that allows LLMs to seamlessly leverage external systems, MCP bridges the gap between AI's conversational abilities and the real-world actions these systems need to take, opening up possibilities for more capable and contextually aware AI assistants across numerous domains.
+
+## Resources
+
+- [GitHub | dotnet-mcp-hero](https://github.com/danielmackay/dotnet-mcp-hero)
+- [GitHub | awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers/)
+- [Model Context Protocol | Docs](https://modelcontextprotocol.io/introduction)
+- [Microsoft | microsoft-partners-with-anthropic-to-create-official-c-sdk-for-model-context-protocol](https://devblogs.microsoft.com/blog/microsoft-partners-with-anthropic-to-create-official-c-sdk-for-model-context-protocol)
+- [Microsoft | build-a-model-context-protocol-mcp-server-in-csharp](https://devblogs.microsoft.com/dotnet/build-a-model-context-protocol-mcp-server-in-csharp/)
+- [Medium | how-to-turn-your-api-into-a-gpt](https://medium.com/cyberark-engineering/how-to-turn-your-api-into-a-gpt-f67387d222c8)
+- [LinkedIn | Calum Simpson](https://www.linkedin.com/pulse/what-mcp-model-context-protocol-calum-simpson-dyrwc/)
+- [MCP Security](https://www.pillar.security/blog/the-security-risks-of-model-context-protocol-mcp)
