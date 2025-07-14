@@ -9,11 +9,45 @@ images: [ '/static/images/deploying-dotnet-aspire-web-apps/banner.png' ]
 
 ![Banner](/static/images/deploying-dotnet-aspire-web-apps/banner.png)
 
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
 ## Introduction
 
-- Brief overview of .NET Aspire and its default Azure deployment model
-- Why you might choose Azure Web Apps over Container Apps
-- What we'll accomplish in this guide
+.NET Aspire has transformed how we build cloud-native applications in the .NET ecosystem, providing an opinionated, cloud-ready stack for building observable, distributed applications. 🚀
+
+While Aspire's default deployment story centers around Azure Container Apps, there are compelling scenarios where you might prefer Azure Web Apps - whether for cost predictability, existing infrastructure investments, or operational simplicity.
+
+### Why Choose Web Apps Over Container Apps?
+
+In my experience with enterprise teams, Web Apps offer several advantages:
+
+- **Fixed-tier pricing** that's more predictable for steady workloads
+- **Leverage existing App Service Plans** and infrastructure investments  
+- **Simplified management** familiar to traditional operations teams
+- **Better integration** with existing monitoring and deployment tooling
+
+### Why Choose Azure SQL Database Over Containerized Databases?
+
+While Container Apps can run containerized databases, Azure SQL Database provides significant advantages for production workloads:
+
+- **Managed service benefits** - automatic backups, patching, and high availability without operational overhead
+- **Enterprise-grade security** with built-in threat detection, data encryption, and compliance certifications
+- **Performance and scaling** options including serverless compute and hyperscale storage
+- **Operational excellence** with monitoring, query performance insights, and automatic tuning
+- **Cost optimization** through reserved capacity pricing and pause/resume capabilities
+
+For most enterprise scenarios, the operational simplicity and robust feature set of Azure SQL Database outweigh the flexibility of running database containers. ⚠️
+
+### What We'll Accomplish
+
+This guide walks you through deploying a .NET Aspire application to Azure Web Apps instead of Container Apps:
+
+✅ **Create a sample Aspire application** with Entity Framework and multiple services  
+✅ **Modify AZD Bicep templates** to provision Web Apps and Azure SQL Database  
+✅ **Configure service-to-service communication** in a Web Apps environment  
+✅ **Deploy and validate** the complete solution  
+
+By the end, you'll understand how to adapt Aspire's deployment model to fit your infrastructure requirements. Let's dive in! 🎯
 
 ## Prerequisites
 
