@@ -57,98 +57,65 @@ To follow along, ensure you have the following set up:
 - Rider / VS2022 / VS Code
 - Active Azure subscription
 
-## Understanding the Default .NET Aspire Deployment
+## Creating a .NET Aspire Application
 
-### Container Apps: The Default Choice
-- How AZD deploys Aspire apps to Container Apps by default
-- Benefits of Container Apps for cloud-native applications
-- When Container Apps might not be the right fit
+At SSW I'm one of the maintainers of the SSW Clean Archtiecture Template. This template provides a solid foundation for Clean Architecutre, DDD, and Clean Testing. It leverages .NET Aspire to get an enteprise grade API up and running with real data in seconds.
 
-### Alternative Deployment Targets
-- Azure Web Apps for traditional hosting
-- Azure SQL Database for relational data
-- Cost and management considerations
+### Creating the solution
 
-## Creating a Sample .NET Aspire Application
-
-### Setting Up the Project Structure
 ```bash
-# Commands to create new Aspire project
-dotnet new aspire-starter -n AspireWebAppDemo
+mkdir AspireWebApp
+cd AspireWebApp
+dotnet new ssw-ca
 ```
 
-### Application Components
-- **AppHost**: Orchestration and service discovery
-- **ApiService**: Backend API with Entity Framework
-- **Web**: Frontend Blazor application
-- **ServiceDefaults**: Shared configuration
+### Examining the Aspire Setup
 
-### Adding Entity Framework and Data Models
-- Configuring EF Core with SQL Server
-- Setting up connection strings for local development
-- Sample data models and DbContext
+As you can see from both the code and the dashboard below, the solution is composed of:
 
-## Configuring Azure Resources with Bicep
+- SQL Server & Database
+- Migration Service: Handles database migrations and test data seeding
+- API: The main API service with Entity Framework
 
-### Understanding the AZD Structure
-- `azure.yaml` configuration file
-- `infra/` directory structure
-- Bicep templates for infrastructure as code
+```cs
+using AppHost.Commands;
+using Projects;
 
-### Modifying Default Bicep Templates
+var builder = DistributedApplication.CreateBuilder(args);
 
-#### Azure SQL Database Configuration
-```bicep
-// Example Bicep snippet for Azure SQL
-resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
-  name: sqlServerName
-  location: location
-  properties: {
-    administratorLogin: sqlAdminUsername
-    administratorLoginPassword: sqlAdminPassword
-  }
-}
+var sqlServer = builder
+    .AddSqlServer("sql")
+    .WithLifetime(ContainerLifetime.Persistent);
+
+var db = sqlServer
+    .AddDatabase("clean-architecture")
+    .WithDropDatabaseCommand();
+
+var migrationService = builder.AddProject<MigrationService>("migrations")
+    .WithReference(db)
+    .WaitFor(sqlServer);
+
+builder
+    .AddProject<WebApi>("api")
+    .WithEndpoint("https", endpoint => endpoint.IsProxied = false)
+    .WithReference(db)
+    .WaitForCompletion(migrationService);
+
+builder.Build().Run();
 ```
 
-#### Azure Web App Configuration
-```bicep
-// Example Bicep snippet for Web Apps
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
-  name: appServicePlanName
-  location: location
-  sku: {
-    name: 'B1'
-    tier: 'Basic'
-  }
-}
-```
+{/* ![Aspire Setup](/static/images/deploying-dotnet-aspire-web-apps/dashboard.png) */}
 
-### Environment Variables and Configuration
-- Mapping Aspire service names to Azure resources
-- Connection string management
-- Application settings configuration
+<figure>
+  <img src="/static/images/deploying-dotnet-aspire-web-apps/dashboard.png" alt="Architecture of MCP" />
+  <figcaption>Figure: Aspire dashboard from SSW Clean Architecture template</figcaption>
+</figure>
 
-## Updating the AZD Configuration
+## AppHost Modification
 
-### Modifying azure.yaml
-```yaml
-# Example azure.yaml configuration
-name: aspire-webapp-demo
-metadata:
-  template: aspire-webapp-demo@0.0.1-beta
-services:
-  apiservice:
-    project: ./AspireWebAppDemo.ApiService
-    host: appservice
-  web:
-    project: ./AspireWebAppDemo.Web
-    host: appservice
-```
+### Adding Support for Azure SQL Database
 
-### Service Mapping Strategy
-- Mapping Aspire services to Azure Web Apps
-- Handling service-to-service communication
-- Configuration and secrets management
+
 
 ## Deployment Process
 
@@ -174,35 +141,6 @@ azd deploy
 - Application settings verification
 - Health check validation
 
-## Troubleshooting Common Issues
-
-### Connection String Problems
-- Local vs. Azure connection string formats
-- Azure SQL firewall configuration
-- Managed identity setup
-
-### Deployment Failures
-- Common AZD error messages and solutions
-- Resource provisioning timeouts
-- Application startup issues
-
-### Performance Considerations
-- Web App scaling configuration
-- SQL Database performance tiers
-- Monitoring and diagnostics setup
-
-## Monitoring and Management
-
-### Application Insights Integration
-- Configuring telemetry and logging
-- Performance monitoring dashboards
-- Alert configuration
-
-### Azure Resource Management
-- Cost optimization strategies
-- Backup and disaster recovery
-- Security best practices
-
 ## Comparing Deployment Options
 
 ### Container Apps vs. Web Apps
@@ -216,23 +154,6 @@ azd deploy
 - Container Apps: Cloud-native, microservices, variable load
 - Web Apps: Traditional apps, predictable load, existing infrastructure
 
-## Best Practices and Recommendations
-
-### Infrastructure as Code
-- Version control for Bicep templates
-- Environment-specific configurations
-- Automated deployment pipelines
-
-### Security Considerations
-- Managed identity for service connections
-- Key Vault integration for secrets
-- Network security group configuration
-
-### Development Workflow
-- Local development with Aspire
-- CI/CD pipeline integration
-- Environment promotion strategies
-
 ## Conclusion
 
 - Summary of what we've accomplished
@@ -245,7 +166,3 @@ azd deploy
 - [Azure Developer CLI Reference](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/)
 - [Azure Web Apps Documentation](https://learn.microsoft.com/en-us/azure/app-service/)
 - [Sample Code Repository](https://github.com/danielmackay/aspire-webapp-deployment)
-
----
-
-*Have questions about deploying .NET Aspire to Azure Web Apps? Leave a comment below or reach out on [Twitter](https://twitter.com/daniel_mackay).*
