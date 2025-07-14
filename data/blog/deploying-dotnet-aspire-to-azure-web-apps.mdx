@@ -1,0 +1,215 @@
+---
+title: 'Step-by-Step: Deploying .NET Aspire to Azure Web Apps with Azure SQL'
+date: '2025-07-14'
+tags: ['dotnet', 'aspire', 'azure', 'deployment', 'web-apps', 'azure-sql']
+draft: true
+summary: 'Learn how to deploy .NET Aspire applications to Azure Web Apps and Azure SQL Database instead of the default Container Apps, including AZD configuration and deployment strategies.'
+---
+
+# Step-by-Step: Deploying .NET Aspire to Azure Web Apps with Azure SQL
+
+## Introduction
+
+- Brief overview of .NET Aspire and its default Azure deployment model
+- Why you might choose Azure Web Apps over Container Apps
+- What we'll accomplish in this guide
+
+## Prerequisites
+
+- .NET Aspire SDK installed
+- Azure CLI and Azure Developer CLI (AZD)
+- Visual Studio 2022 or VS Code with C# extension
+- Active Azure subscription
+
+## Understanding the Default .NET Aspire Deployment
+
+### Container Apps: The Default Choice
+- How AZD deploys Aspire apps to Container Apps by default
+- Benefits of Container Apps for cloud-native applications
+- When Container Apps might not be the right fit
+
+### Alternative Deployment Targets
+- Azure Web Apps for traditional hosting
+- Azure SQL Database for relational data
+- Cost and management considerations
+
+## Creating a Sample .NET Aspire Application
+
+### Setting Up the Project Structure
+```bash
+# Commands to create new Aspire project
+dotnet new aspire-starter -n AspireWebAppDemo
+```
+
+### Application Components
+- **AppHost**: Orchestration and service discovery
+- **ApiService**: Backend API with Entity Framework
+- **Web**: Frontend Blazor application
+- **ServiceDefaults**: Shared configuration
+
+### Adding Entity Framework and Data Models
+- Configuring EF Core with SQL Server
+- Setting up connection strings for local development
+- Sample data models and DbContext
+
+## Configuring Azure Resources with Bicep
+
+### Understanding the AZD Structure
+- `azure.yaml` configuration file
+- `infra/` directory structure
+- Bicep templates for infrastructure as code
+
+### Modifying Default Bicep Templates
+
+#### Azure SQL Database Configuration
+```bicep
+// Example Bicep snippet for Azure SQL
+resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
+  name: sqlServerName
+  location: location
+  properties: {
+    administratorLogin: sqlAdminUsername
+    administratorLoginPassword: sqlAdminPassword
+  }
+}
+```
+
+#### Azure Web App Configuration
+```bicep
+// Example Bicep snippet for Web Apps
+resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
+  name: appServicePlanName
+  location: location
+  sku: {
+    name: 'B1'
+    tier: 'Basic'
+  }
+}
+```
+
+### Environment Variables and Configuration
+- Mapping Aspire service names to Azure resources
+- Connection string management
+- Application settings configuration
+
+## Updating the AZD Configuration
+
+### Modifying azure.yaml
+```yaml
+# Example azure.yaml configuration
+name: aspire-webapp-demo
+metadata:
+  template: aspire-webapp-demo@0.0.1-beta
+services:
+  apiservice:
+    project: ./AspireWebAppDemo.ApiService
+    host: appservice
+  web:
+    project: ./AspireWebAppDemo.Web
+    host: appservice
+```
+
+### Service Mapping Strategy
+- Mapping Aspire services to Azure Web Apps
+- Handling service-to-service communication
+- Configuration and secrets management
+
+## Deployment Process
+
+### Step 1: Initialize AZD
+```bash
+azd init
+azd auth login
+```
+
+### Step 2: Configure Infrastructure
+- Review and customize Bicep templates
+- Set required parameters
+- Validate resource configurations
+
+### Step 3: Deploy to Azure
+```bash
+azd provision
+azd deploy
+```
+
+### Step 4: Post-Deployment Configuration
+- Database migrations and seeding
+- Application settings verification
+- Health check validation
+
+## Troubleshooting Common Issues
+
+### Connection String Problems
+- Local vs. Azure connection string formats
+- Azure SQL firewall configuration
+- Managed identity setup
+
+### Deployment Failures
+- Common AZD error messages and solutions
+- Resource provisioning timeouts
+- Application startup issues
+
+### Performance Considerations
+- Web App scaling configuration
+- SQL Database performance tiers
+- Monitoring and diagnostics setup
+
+## Monitoring and Management
+
+### Application Insights Integration
+- Configuring telemetry and logging
+- Performance monitoring dashboards
+- Alert configuration
+
+### Azure Resource Management
+- Cost optimization strategies
+- Backup and disaster recovery
+- Security best practices
+
+## Comparing Deployment Options
+
+### Container Apps vs. Web Apps
+| Feature | Container Apps | Web Apps |
+|---------|---------------|----------|
+| Scaling | Automatic | Manual/Auto |
+| Cost | Pay-per-use | Fixed tier pricing |
+| Management | Kubernetes-like | Traditional hosting |
+
+### When to Choose Each Option
+- Container Apps: Cloud-native, microservices, variable load
+- Web Apps: Traditional apps, predictable load, existing infrastructure
+
+## Best Practices and Recommendations
+
+### Infrastructure as Code
+- Version control for Bicep templates
+- Environment-specific configurations
+- Automated deployment pipelines
+
+### Security Considerations
+- Managed identity for service connections
+- Key Vault integration for secrets
+- Network security group configuration
+
+### Development Workflow
+- Local development with Aspire
+- CI/CD pipeline integration
+- Environment promotion strategies
+
+## Conclusion
+
+- Summary of what we've accomplished
+- Benefits of this deployment approach
+- Next steps and further learning resources
+
+## Additional Resources
+
+- [.NET Aspire Documentation](https://learn.microsoft.com/en-us/dotnet/aspire/)
+- [Azure Developer CLI Reference](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/)
+- [Azure Web Apps Documentation](https://learn.microsoft.com/en-us/azure/app-service/)
+- [Sample Code Repository](https://github.com/danielmackay/aspire-webapp-deployment)
+
+---
+
+*Have questions about deploying .NET Aspire to Azure Web Apps? Leave a comment below or reach out on [Twitter](https://twitter.com/daniel_mackay).*
