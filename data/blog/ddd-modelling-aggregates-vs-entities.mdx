@@ -1,0 +1,429 @@
+---
+title: 'DDD Modelling - Aggregates vs Entities: A Practical Guide'
+date: '2025-07-18'
+tags: ['ddd', 'domain-driven-design', 'software-architecture', 'dotnet', 'clean-architecture']
+draft: false
+summary: 'Master the art of distinguishing between aggregate roots and entities in Domain-Driven Design. Learn practical guidelines, see real-world examples, and avoid common pitfalls when modeling your domain.'
+images: ['/static/images/ddd-modelling-aggregates-vs-entities/banner.png']
+layout: PostLayout
+---
+
+import TOCInline from '@/components/TOCInline'
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+When applying **Domain-Driven Design (DDD)**, one of the most crucial decisions you'll make is distinguishing between **aggregate roots** and **entities**. This distinction is fundamental to creating a well-structured domain model that enforces business rules, maintains invariants, and ensures transactional consistency.
+
+After working with DDD in production systems for several years, I've seen how getting this right can make the difference between a maintainable, robust system and one that becomes increasingly difficult to work with. Let's dive into the practical guidelines and real-world examples that will help you make these decisions confidently.
+
+PLACEHOLDER_IMAGE
+
+## What Are Aggregates and Entities?
+
+Before we dive into the guidelines, let's quickly clarify what we're talking about:
+
+- **Entity**: An object with a distinct identity that persists over time
+- **Aggregate**: A cluster of related objects (entities and value objects) that form a consistency boundary
+- **Aggregate Root**: The single entry point to an aggregate that controls access to its internal entities
+
+Think of an aggregate as a protective boundary around related objects, with the aggregate root acting as the gatekeeper.
+
+## ✅ Best Practices for Choosing an Aggregate Root
+
+### 1. **Enforce Invariants within Aggregate Boundaries**
+
+An **aggregate** is a **consistency boundary**: all business rules (invariants) must be valid after any change to the aggregate. Choose an aggregate root such that it **encapsulates all the entities and value objects** needed to enforce its business invariants.
+
+Here's a practical example from an e-commerce domain:
+
+```csharp
+public class Order // Aggregate Root
+{
+    private readonly List<OrderLine> _orderLines = new();
+    private decimal _totalAmount;
+    
+    public IReadOnlyList<OrderLine> OrderLines => _orderLines.AsReadOnly();
+    public decimal TotalAmount => _totalAmount;
+    
+    public void AddOrderLine(Product product, int quantity, decimal unitPrice)
+    {
+        if (quantity <= 0)
+            throw new ArgumentException("Quantity must be positive");
+            
+        var orderLine = new OrderLine(product.Id, quantity, unitPrice);
+        _orderLines.Add(orderLine);
+        
+        // Enforce invariant: total must equal sum of line items
+        RecalculateTotal();
+    }
+    
+    private void RecalculateTotal()
+    {
+        _totalAmount = _orderLines.Sum(line => line.Total);
+    }
+}
+
+public class OrderLine // Entity within the Order aggregate
+{
+    public ProductId ProductId { get; }
+    public int Quantity { get; }
+    public decimal UnitPrice { get; }
+    public decimal Total => Quantity * UnitPrice;
+    
+    internal OrderLine(ProductId productId, int quantity, decimal unitPrice)
+    {
+        ProductId = productId;
+        Quantity = quantity;
+        UnitPrice = unitPrice;
+    }
+}
+```
+
+Notice how the `Order` aggregate root ensures that the total amount invariant is always maintained whenever order lines are modified.
+
+### 2. **One Transaction per Aggregate**
+
+Aggregates should be **modified in a single transaction**. Avoid designing aggregates that require coordinating changes across multiple roots in one transaction. If that's needed, revisit your boundaries.
+
+```csharp
+// ❌ Bad: Trying to modify multiple aggregates in one transaction
+public class OrderService
+{
+    public void ProcessOrder(OrderId orderId, CustomerId customerId)
+    {
+        using var transaction = _context.BeginTransaction();
+        
+        var order = _orderRepository.GetById(orderId);
+        var customer = _customerRepository.GetById(customerId);
+        
+        // This violates the one-transaction-per-aggregate rule
+        order.MarkAsProcessed();
+        customer.UpdateLastOrderDate(DateTime.Now);
+        
+        _orderRepository.Save(order);
+        _customerRepository.Save(customer);
+        
+        transaction.Commit();
+    }
+}
+
+// ✅ Good: Use domain events for cross-aggregate coordination
+public class Order
+{
+    public void MarkAsProcessed()
+    {
+        Status = OrderStatus.Processed;
+        ProcessedAt = DateTime.Now;
+        
+        // Raise domain event instead of directly modifying other aggregates
+        AddDomainEvent(new OrderProcessedEvent(Id, CustomerId, ProcessedAt));
+    }
+}
+```
+
+### 3. **Design for Reference, Not Containment**
+
+If one entity needs to refer to another, it usually references the **aggregate root** (e.g., by ID), not an inner entity. This encourages **decoupling between aggregates**.
+
+```csharp
+public class Order
+{
+    public CustomerId CustomerId { get; } // Reference by ID, not containment
+    public ShippingAddress ShippingAddress { get; } // Value object - can be contained
+    
+    // Don't do this:
+    // public Customer Customer { get; } // ❌ Contains another aggregate
+}
+
+public class Customer // Different aggregate root
+{
+    public CustomerId Id { get; }
+    public string Name { get; }
+    public Email Email { get; }
+    
+    // Customer has its own lifecycle and invariants
+}
+```
+
+### 4. **Keep Aggregates Small**
+
+The smaller the aggregate, the less likely it will lead to performance or concurrency issues. Don't include unrelated data just because it's "part of the same object graph".
+
+```csharp
+// ❌ Bad: Too large, includes unrelated concerns
+public class Customer
+{
+    public CustomerId Id { get; }
+    public string Name { get; }
+    
+    // These should probably be separate aggregates
+    public List<Order> Orders { get; } // ❌ Order history
+    public List<SupportTicket> SupportTickets { get; } // ❌ Support concerns
+    public List<MarketingPreference> MarketingPreferences { get; } // ❌ Marketing concerns
+}
+
+// ✅ Good: Focused on core customer identity concerns
+public class Customer
+{
+    public CustomerId Id { get; }
+    public string Name { get; }
+    public Email Email { get; }
+    public CustomerStatus Status { get; }
+    
+    public void UpdateEmail(Email newEmail)
+    {
+        // Validate business rules related to customer identity
+        if (Status == CustomerStatus.Suspended)
+            throw new InvalidOperationException("Cannot update email for suspended customer");
+            
+        Email = newEmail;
+    }
+}
+```
+
+### 5. **Access Internal Entities Through the Root**
+
+All operations on an aggregate should go **through the root**, not directly to its internal entities. This ensures the root can enforce invariants and control state changes.
+
+```csharp
+public class ShoppingCart // Aggregate Root
+{
+    private readonly List<CartItem> _items = new();
+    
+    public IReadOnlyList<CartItem> Items => _items.AsReadOnly();
+    
+    public void AddItem(ProductId productId, int quantity)
+    {
+        var existingItem = _items.FirstOrDefault(i => i.ProductId == productId);
+        
+        if (existingItem != null)
+        {
+            // Use internal method to maintain invariants
+            existingItem.UpdateQuantity(existingItem.Quantity + quantity);
+        }
+        else
+        {
+            _items.Add(new CartItem(productId, quantity));
+        }
+        
+        // Enforce business rule: max 50 items per cart
+        if (_items.Sum(i => i.Quantity) > 50)
+        {
+            throw new InvalidOperationException("Cart cannot contain more than 50 items");
+        }
+    }
+}
+
+public class CartItem // Entity within aggregate
+{
+    public ProductId ProductId { get; }
+    public int Quantity { get; private set; }
+    
+    internal CartItem(ProductId productId, int quantity)
+    {
+        ProductId = productId;
+        Quantity = quantity;
+    }
+    
+    // Internal method - only accessible through aggregate root
+    internal void UpdateQuantity(int newQuantity)
+    {
+        if (newQuantity <= 0)
+            throw new ArgumentException("Quantity must be positive");
+            
+        Quantity = newQuantity;
+    }
+}
+```
+
+### 6. **Entity Lifecycle is Tied to the Aggregate**
+
+If an entity **cannot exist without the root**, it's often a good candidate to be **internal to the aggregate**. If it has its own **distinct lifecycle**, it may be its own aggregate.
+
+```csharp
+// Example: School domain
+
+// Student can exist independently and be part of many aggregates
+public class Student // Aggregate Root
+{
+    public StudentId Id { get; }
+    public string Name { get; }
+    public Grade CurrentGrade { get; }
+    
+    // Student has its own lifecycle and can exist across multiple contexts
+}
+
+public class Classroom // Aggregate Root
+{
+    private readonly List<ClassroomEnrollment> _enrollments = new();
+    
+    public ClassroomId Id { get; }
+    public string Name { get; }
+    public int MaxCapacity { get; }
+    
+    public void EnrollStudent(StudentId studentId)
+    {
+        if (_enrollments.Count >= MaxCapacity)
+            throw new InvalidOperationException("Classroom is at capacity");
+            
+        var enrollment = new ClassroomEnrollment(studentId, DateTime.Now);
+        _enrollments.Add(enrollment);
+    }
+}
+
+// ClassroomEnrollment is tied to the Classroom aggregate
+public class ClassroomEnrollment // Entity within Classroom aggregate
+{
+    public StudentId StudentId { get; }
+    public DateTime EnrolledAt { get; }
+    
+    internal ClassroomEnrollment(StudentId studentId, DateTime enrolledAt)
+    {
+        StudentId = studentId;
+        EnrolledAt = enrolledAt;
+    }
+}
+```
+
+## 🧭 Decision-Making Guidelines
+
+When you're unsure whether something should be an aggregate root or an entity, ask yourself these questions:
+
+| Question | Implication |
+|----------|-------------|
+| **Does this entity need to be retrieved and updated independently?** | If yes, it's probably an aggregate root. |
+| **Does this entity enforce any business rules that span multiple child objects?** | Then it's likely a good candidate for an aggregate root. |
+| **Can this entity exist on its own or outside the root?** | If yes, it may be its own aggregate root. |
+| **Do other objects reference this entity directly, or just by aggregate ID?** | If they need direct reference, maybe it should be an aggregate. |
+| **Would separate roots require consistency across transactions?** | If so, you may have an aggregate boundary issue. |
+
+## 🚫 Common Mistakes I've Seen
+
+### Over-modeling
+Making every object an aggregate root leads to unnecessary complexity and makes it difficult to enforce business rules.
+
+```csharp
+// ❌ Bad: Everything is an aggregate root
+public class Order { }
+public class OrderLine { } // This should be inside Order
+public class OrderLineItem { } // This should be inside Order
+public class OrderNote { } // This should be inside Order
+```
+
+### Under-modeling
+Treating deeply connected entities as separate aggregates can cause transactional consistency issues.
+
+```csharp
+// ❌ Bad: Separate aggregates that need to be consistent
+public class Invoice { }
+public class InvoiceLine { } // Should be inside Invoice aggregate
+
+// This creates consistency issues:
+// What if InvoiceLine total doesn't match Invoice total?
+```
+
+### Thinking in Database Terms
+DDD models behavior and business rules, not tables and foreign keys. Don't let your database schema drive your aggregate design.
+
+## 🔁 Real-world Example: E-commerce Order System
+
+Let me walk through a practical example from an e-commerce system I worked on:
+
+```csharp
+// Customer is an aggregate root - has its own lifecycle
+public class Customer
+{
+    public CustomerId Id { get; }
+    public string Name { get; private set; }
+    public Email Email { get; private set; }
+    public CustomerStatus Status { get; private set; }
+    
+    public void UpdateEmail(Email newEmail)
+    {
+        if (Status == CustomerStatus.Suspended)
+            throw new InvalidOperationException("Cannot update email for suspended customer");
+            
+        Email = newEmail;
+        AddDomainEvent(new CustomerEmailUpdatedEvent(Id, newEmail));
+    }
+}
+
+// Order is also an aggregate root - separate lifecycle from Customer
+public class Order
+{
+    private readonly List<OrderLine> _orderLines = new();
+    
+    public OrderId Id { get; }
+    public CustomerId CustomerId { get; } // Reference by ID, not containment
+    public OrderStatus Status { get; private set; }
+    public decimal TotalAmount { get; private set; }
+    
+    public IReadOnlyList<OrderLine> OrderLines => _orderLines.AsReadOnly();
+    
+    public void AddOrderLine(ProductId productId, int quantity, decimal unitPrice)
+    {
+        if (Status != OrderStatus.Draft)
+            throw new InvalidOperationException("Cannot modify confirmed order");
+            
+        var orderLine = new OrderLine(productId, quantity, unitPrice);
+        _orderLines.Add(orderLine);
+        RecalculateTotal();
+    }
+    
+    public void Confirm()
+    {
+        if (!_orderLines.Any())
+            throw new InvalidOperationException("Cannot confirm empty order");
+            
+        Status = OrderStatus.Confirmed;
+        AddDomainEvent(new OrderConfirmedEvent(Id, CustomerId, TotalAmount));
+    }
+    
+    private void RecalculateTotal()
+    {
+        TotalAmount = _orderLines.Sum(line => line.Total);
+    }
+}
+
+// OrderLine is an entity within the Order aggregate
+public class OrderLine
+{
+    public ProductId ProductId { get; }
+    public int Quantity { get; }
+    public decimal UnitPrice { get; }
+    public decimal Total => Quantity * UnitPrice;
+    
+    internal OrderLine(ProductId productId, int quantity, decimal unitPrice)
+    {
+        ProductId = productId;
+        Quantity = quantity;
+        UnitPrice = unitPrice;
+    }
+}
+```
+
+In this example:
+- `Customer` and `Order` are separate aggregate roots because they have different lifecycles
+- `Order` references `Customer` by ID, not by containment
+- `OrderLine` is an entity within the `Order` aggregate because it cannot exist independently
+- Each aggregate maintains its own invariants and consistency rules
+
+## Wrapping Up
+
+Getting aggregate boundaries right is one of the most important decisions in DDD. It affects everything from transaction boundaries to performance characteristics to the maintainability of your code.
+
+Remember these key principles:
+- **Keep aggregates small and focused** on a single business concern
+- **Enforce invariants within aggregate boundaries**
+- **Use domain events for cross-aggregate coordination**
+- **Design for your domain's needs**, not your database schema
+
+The examples I've shown here are based on real systems I've worked on, and getting these boundaries right made a huge difference in how maintainable and robust the systems became over time.
+
+What aggregate design challenges are you facing in your current project? I'd love to hear about them in the comments below! 🚀
+
+## Additional Resources
+
+- [Domain-Driven Design: Tackling Complexity in the Heart of Software](https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215) by Eric Evans
+- [Implementing Domain-Driven Design](https://www.amazon.com/Implementing-Domain-Driven-Design-Vaughn-Vernon/dp/0321834577) by Vaughn Vernon
+- [Microsoft's .NET Application Architecture Guides](https://docs.microsoft.com/en-us/dotnet/architecture/)
