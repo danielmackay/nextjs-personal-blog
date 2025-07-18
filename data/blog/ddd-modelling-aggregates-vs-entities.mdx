@@ -1,20 +1,22 @@
 ---
 title: 'DDD Modelling - Aggregates vs Entities: A Practical Guide'
 date: '2025-07-18'
-tags: ['ddd', 'domain-driven-design', 'software-architecture', 'dotnet', 'clean-architecture']
+tags: ['domain-driven-design', 'software-architecture', 'dotnet', 'clean-architecture']
 draft: false
 summary: 'Master the art of distinguishing between aggregate roots and entities in Domain-Driven Design. Learn practical guidelines, see real-world examples, and avoid common pitfalls when modeling your domain.'
 images: ['/static/images/ddd-modelling-aggregates-vs-entities/banner.png']
 layout: PostLayout
 ---
 
-<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+![Banner](/static/images/ddd-modelling-aggregates-vs-entities/banner.png)
 
-When applying **Domain-Driven Design (DDD)**, one of the most crucial decisions you'll make is distinguishing between **aggregate roots** and **entities**. This distinction is fundamental to creating a well-structured domain model that enforces business rules, maintains invariants, and ensures transactional consistency.
+<TOCInline toc={props.toc} exclude="Overview" toHeading={2} />
+
+## Introduction
+
+When applying **Domain-Driven Design (DDD)**, one of the trickiest decisions you'll make is distinguishing between **aggregate roots** and **entities**. This distinction is fundamental to creating a well-structured domain model that enforces business rules, maintains invariants, and ensures transactional consistency.
 
 After working with DDD in production systems for several years, I've seen how getting this right can make the difference between a maintainable, robust system and one that becomes increasingly difficult to work with. Let's dive into the practical guidelines and real-world examples that will help you make these decisions confidently.
-
-PLACEHOLDER_IMAGE
 
 ## What Are Aggregates and Entities?
 
@@ -26,9 +28,9 @@ Before we dive into the guidelines, let's quickly clarify what we're talking abo
 
 Think of an aggregate as a protective boundary around related objects, with the aggregate root acting as the gatekeeper.
 
-## ✅ Best Practices for Choosing an Aggregate Root
+## Best Practices for Choosing an Aggregate Root
 
-### 1. **Enforce Invariants within Aggregate Boundaries**
+### 1. ✅ **Enforce Invariants within Aggregate Boundaries**
 
 An **aggregate** is a **consistency boundary**: all business rules (invariants) must be valid after any change to the aggregate. Choose an aggregate root such that it **encapsulates all the entities and value objects** needed to enforce its business invariants.
 
@@ -79,7 +81,7 @@ public class OrderLine // Entity within the Order aggregate
 
 Notice how the `Order` aggregate root ensures that the total amount invariant is always maintained whenever order lines are modified.
 
-### 2. **One Transaction per Aggregate**
+### 2. ✅ **One Transaction per Aggregate**
 
 Aggregates should be **modified in a single transaction**. Avoid designing aggregates that require coordinating changes across multiple roots in one transaction. If that's needed, revisit your boundaries.
 
@@ -119,7 +121,7 @@ public class Order
 }
 ```
 
-### 3. **Design for Reference, Not Containment**
+### 3. ✅ **Design for Reference, Not Containment**
 
 If one entity needs to refer to another, it usually references the **aggregate root** (e.g., by ID), not an inner entity. This encourages **decoupling between aggregates**.
 
@@ -143,7 +145,22 @@ public class Customer // Different aggregate root
 }
 ```
 
-### 4. **Keep Aggregates Small**
+Another way to think about this is to **design for rules, not relationships**. 
+
+You may think you need to model every relationship between entities, but often it's better to focus on the rules and invariants that need to be enforced. This can lead to simpler, more maintainable aggregates. The foreign key relationships can still be configured in your infastructure layer, without polluting your domain model with unnecessary navigation properties.
+
+Without using adding unnecessary navigation properties, we can configure EF for the `Order` above as follows:
+
+```csharp
+modelBuilder.Entity<Order>()
+    .HasOne<Customer>() // Use generic type to avoid navigation property
+    .WithMany()
+    .HasForeignKey(o => o.CustomerId);
+```
+
+This can make querying data tricker, but you can get around it by using EF to do joins, or using raw SQL queries.
+
+### 4. ✅ **Keep Aggregates Small**
 
 The smaller the aggregate, the less likely it will lead to performance or concurrency issues. Don't include unrelated data just because it's "part of the same object graph".
 
@@ -179,7 +196,7 @@ public class Customer
 }
 ```
 
-### 5. **Access Internal Entities Through the Root**
+### 5. ✅ **Access Internal Entities Through the Root**
 
 All operations on an aggregate should go **through the root**, not directly to its internal entities. This ensures the root can enforce invariants and control state changes.
 
@@ -234,7 +251,7 @@ public class CartItem // Entity within aggregate
 }
 ```
 
-### 6. **Entity Lifecycle is Tied to the Aggregate**
+### 6. ✅ **Entity Lifecycle is Tied to the Aggregate**
 
 If an entity **cannot exist without the root**, it's often a good candidate to be **internal to the aggregate**. If it has its own **distinct lifecycle**, it may be its own aggregate.
 
@@ -283,7 +300,7 @@ public class ClassroomEnrollment // Entity within Classroom aggregate
 }
 ```
 
-## 🧭 Decision-Making Guidelines
+## Decision-Making Guidelines
 
 When you're unsure whether something should be an aggregate root or an entity, ask yourself these questions:
 
@@ -295,9 +312,9 @@ When you're unsure whether something should be an aggregate root or an entity, a
 | **Do other objects reference this entity directly, or just by aggregate ID?** | If they need direct reference, maybe it should be an aggregate. |
 | **Would separate roots require consistency across transactions?** | If so, you may have an aggregate boundary issue. |
 
-## 🚫 Common Mistakes I've Seen
+## Common Mistakes I've Seen
 
-### Over-modeling
+### ❌ Over-modeling
 Making every object an aggregate root leads to unnecessary complexity and makes it difficult to enforce business rules.
 
 ```csharp
@@ -308,7 +325,7 @@ public class OrderLineItem { } // This should be inside Order
 public class OrderNote { } // This should be inside Order
 ```
 
-### Under-modeling
+### ❌ Under-modeling
 Treating deeply connected entities as separate aggregates can cause transactional consistency issues.
 
 ```csharp
@@ -320,12 +337,12 @@ public class InvoiceLine { } // Should be inside Invoice aggregate
 // What if InvoiceLine total doesn't match Invoice total?
 ```
 
-### Thinking in Database Terms
+### ❌ Thinking in Database Terms
 DDD models behavior and business rules, not tables and foreign keys. Don't let your database schema drive your aggregate design.
 
-## 🔁 Real-world Example: E-commerce Order System
+## Real-world Example: E-commerce Order System
 
-Let me walk through a practical example from an e-commerce system I worked on:
+Putting it all together, let's look at a simplified e-commerce order system:
 
 ```csharp
 // Customer is an aggregate root - has its own lifecycle
@@ -406,7 +423,7 @@ In this example:
 - `OrderLine` is an entity within the `Order` aggregate because it cannot exist independently
 - Each aggregate maintains its own invariants and consistency rules
 
-## Wrapping Up
+## Summary
 
 Getting aggregate boundaries right is one of the most important decisions in DDD. It affects everything from transaction boundaries to performance characteristics to the maintainability of your code.
 
@@ -418,10 +435,12 @@ Remember these key principles:
 
 The examples I've shown here are based on real systems I've worked on, and getting these boundaries right made a huge difference in how maintainable and robust the systems became over time.
 
+These techniques are paying dividends due to the complex nature of my current client project. Just ask my colleague [Gordon Beaming](https://gordonbeeming.com/about) who is a newly converted DDD fanatic. 😍
+
 What aggregate design challenges are you facing in your current project? I'd love to hear about them in the comments below! 🚀
 
-## Additional Resources
+## Resources
 
 - [Domain-Driven Design: Tackling Complexity in the Heart of Software](https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215) by Eric Evans
 - [Implementing Domain-Driven Design](https://www.amazon.com/Implementing-Domain-Driven-Design-Vaughn-Vernon/dp/0321834577) by Vaughn Vernon
-- [Microsoft's .NET Application Architecture Guides](https://docs.microsoft.com/en-us/dotnet/architecture/)
+- [Code Opinion | You dont need an Aggregate in DDD. Model Rules, Not Relationships](https://www.youtube.com/watch?v=ZvY5fREVyZk)

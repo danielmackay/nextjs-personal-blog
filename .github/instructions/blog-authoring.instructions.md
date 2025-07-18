@@ -8,15 +8,18 @@ applyTo: '*.mdx'
 - **Personal and Conversational**: Use first-person perspective, share personal experiences and anecdotes
 - **Approachable Expert**: Technical but accessible - explain complex concepts without intimidating beginners
 - **Honest and Balanced**: Acknowledge limitations, trade-offs, and real-world challenges rather than overselling solutions
-- **Strategic Emoji Use**: Include emojis for emphasis (✅❌⚠️😆🙌) but use sparingly and purposefully
+- **Strategic Emoji Use**: Include emojis for emphasis (✅❌⚠️😆🙌😎🤮😭) but use sparingly and purposefully
 
 ### Content Structure Requirements
 - **TOC Integration**: Always include `<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />`
 - **TOCInline Component**: Do not import directly in the file, it will be handled automatically
 - **Banner Images**: Create custom header images at `/static/images/[slug]/banner.png`
+- **Banner Images**: Add an image like this directly after the frontmatter: `![Banner](/static/images/[slug]/banner.png)`
 - **Prerequisites Section**: Clearly state what readers need before starting (tools, knowledge, accounts)
 - **Introduction Pattern**: Context → Problem → What we'll accomplish
 - **Step-by-Step Format**: Use numbered sections for tutorials and guides
+- **Article Images**: If you feel an image is appropriate add the text PLACEHOLDER_IMAGE and I'll find an image for you.
+- **Mandatory Sections**: Start the article with an 'Introduction' section, and end with 'Summary' and 'Resources' sections
 
 ### Technical Content Patterns
 - **Code-Forward Approach**: Include abundant, well-formatted code examples with syntax highlighting
@@ -29,7 +32,7 @@ applyTo: '*.mdx'
 title: 'Descriptive Title - Avoid Generic Names'
 date: 'YYYY-MM-DD'
 tags: ['dotnet', 'azure', 'specific-tech'] # Use kebab-case, focus on searchable terms
-draft: false # Set to true while writing
+draft: true # Set to false when ready for publication
 summary: 'Compelling 1-2 sentence summary highlighting the practical value'
 images: ['/static/images/[slug]/banner.png']
 layout: PostLayout # Default for most technical content
