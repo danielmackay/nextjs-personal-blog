@@ -12,6 +12,7 @@ applyTo: '*.mdx'
 
 ### Content Structure Requirements
 - **TOC Integration**: Always include `<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />`
+- **TOCInline Component**: Do not import directly in the file, it will be handled automatically
 - **Banner Images**: Create custom header images at `/static/images/[slug]/banner.png`
 - **Prerequisites Section**: Clearly state what readers need before starting (tools, knowledge, accounts)
 - **Introduction Pattern**: Context → Problem → What we'll accomplish
