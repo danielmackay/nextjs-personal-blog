@@ -1,0 +1,173 @@
+---
+title: 'Step-by-Step: Deploying .NET Aspire to Azure Web Apps with Azure SQL'
+date: '2025-07-14'
+tags: ['dotnet', 'aspire', 'azure', 'devops', 'azure-cli']
+draft: true
+summary: 'Learn how to deploy .NET Aspire applications to Azure Web Apps and Azure SQL Database instead of the default Container Apps, including AZD configuration and deployment strategies.'
+images: [ '/static/images/deploying-dotnet-aspire-web-apps/banner.png' ]
+---
+
+![Banner](/static/images/deploying-dotnet-aspire-web-apps/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## Introduction
+
+.NET Aspire has transformed how we build cloud-native applications in the .NET ecosystem, providing an opinionated, cloud-ready stack for building observable, distributed applications. 🚀
+
+While Aspire's default deployment story centers around Azure Container Apps, there are compelling scenarios where you might prefer Azure Web Apps - whether for cost predictability, existing infrastructure investments, or operational simplicity.
+
+### Why Choose Web Apps Over Container Apps?
+
+In my experience with enterprise teams, Web Apps offer several advantages:
+
+- **Fixed-tier pricing** that's more predictable for steady workloads
+- **Leverage existing App Service Plans** and infrastructure investments  
+- **Simplified management** familiar to traditional operations teams
+- **Better integration** with existing monitoring and deployment tooling
+
+### Why Choose Azure SQL Database Over Containerized Databases?
+
+While Container Apps can run containerized databases, Azure SQL Database provides significant advantages for production workloads:
+
+- **Managed service benefits** - automatic backups, patching, and high availability without operational overhead
+- **Enterprise-grade security** with built-in threat detection, data encryption, and compliance certifications
+- **Performance and scaling** options including serverless compute and hyperscale storage
+- **Operational excellence** with monitoring, query performance insights, and automatic tuning
+- **Cost optimization** through reserved capacity pricing and pause/resume capabilities
+
+For most enterprise scenarios, the operational simplicity and robust feature set of Azure SQL Database outweigh the flexibility of running database containers. ⚠️
+
+### What We'll Accomplish
+
+This guide walks you through deploying a .NET Aspire application to Azure Web Apps instead of Container Apps:
+
+✅ **Create a sample Aspire application** with Entity Framework and multiple services  
+✅ **Modify AZD Bicep templates** to provision Web Apps and Azure SQL Database  
+✅ **Configure service-to-service communication** in a Web Apps environment  
+✅ **Deploy and validate** the complete solution  
+
+By the end, you'll understand how to adapt Aspire's deployment model to fit your infrastructure requirements. Let's dive in! 🎯
+
+## Prerequisites
+
+To follow along, ensure you have the following set up:
+
+- Azure CLI (AZ) and Azure Developer CLI (AZD)
+- Rider / VS2022 / VS Code
+- Active Azure subscription
+
+## Creating a .NET Aspire Application
+
+At SSW I'm one of the maintainers of the SSW Clean Archtiecture Template. This template provides a solid foundation for Clean Architecutre, DDD, and Clean Testing. It leverages .NET Aspire to get an enteprise grade API up and running with real data in seconds.
+
+### Creating the solution
+
+```bash
+mkdir AspireWebApp
+cd AspireWebApp
+dotnet new ssw-ca
+```
+
+### Examining the Aspire Setup
+
+As you can see from both the code and the dashboard below, the solution is composed of:
+
+- SQL Server & Database
+- Migration Service: Handles database migrations and test data seeding
+- API: The main API service with Entity Framework
+
+```cs
+using AppHost.Commands;
+using Projects;
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+var sqlServer = builder
+    .AddSqlServer("sql")
+    .WithLifetime(ContainerLifetime.Persistent);
+
+var db = sqlServer
+    .AddDatabase("clean-architecture")
+    .WithDropDatabaseCommand();
+
+var migrationService = builder.AddProject<MigrationService>("migrations")
+    .WithReference(db)
+    .WaitFor(sqlServer);
+
+builder
+    .AddProject<WebApi>("api")
+    .WithEndpoint("https", endpoint => endpoint.IsProxied = false)
+    .WithReference(db)
+    .WaitForCompletion(migrationService);
+
+builder.Build().Run();
+```
+
+{/* ![Aspire Setup](/static/images/deploying-dotnet-aspire-web-apps/dashboard.png) */}
+
+<figure>
+  <img src="/static/images/deploying-dotnet-aspire-web-apps/dashboard.png" alt="Architecture of MCP" />
+  <figcaption>Figure: Aspire dashboard from SSW Clean Architecture template</figcaption>
+</figure>
+
+## AppHost Modification
+
+### Adding Support for Azure SQL Database
+
+TODO
+
+### Adding Support for Azure Web Apps
+
+TODO
+
+
+## Deployment Process
+
+### Step 1: Initialize AZD
+```bash
+azd init
+azd auth login
+```
+
+### Step 2: Configure Infrastructure
+- Review and customize Bicep templates
+- Set required parameters
+- Validate resource configurations
+
+### Step 3: Deploy to Azure
+```bash
+azd provision
+azd deploy
+```
+
+### Step 4: Post-Deployment Configuration
+- Database migrations and seeding
+- Application settings verification
+- Health check validation
+
+## Comparing Deployment Options
+
+### Container Apps vs. Web Apps
+| Feature | Container Apps | Web Apps |
+|---------|---------------|----------|
+| Scaling | Automatic | Manual/Auto |
+| Cost | Pay-per-use | Fixed tier pricing |
+| Management | Kubernetes-like | Traditional hosting |
+
+### When to Choose Each Option
+- Container Apps: Cloud-native, microservices, variable load
+- Web Apps: Traditional apps, predictable load, existing infrastructure
+
+## Conclusion
+
+- Summary of what we've accomplished
+- Benefits of this deployment approach
+- Next steps and further learning resources
+
+## Additional Resources
+
+- [.NET Aspire Documentation](https://learn.microsoft.com/en-us/dotnet/aspire/)
+- [Azure Developer CLI Reference](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/)
+- [Azure Web Apps Documentation](https://learn.microsoft.com/en-us/azure/app-service/)
+- [Sample Code Repository](https://github.com/danielmackay/aspire-webapp-deployment)
