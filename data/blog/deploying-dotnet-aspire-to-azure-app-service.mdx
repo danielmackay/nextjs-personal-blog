@@ -1,0 +1,377 @@
+---
+title: 'Deploying .NET Aspire to Azure with App Service, Azure SQL and Application Insights'
+date: '2025-08-03'
+tags: ['dotnet', 'aspire', 'azure', 'devops', 'azure-cli', 'application-insights', 'app-sevice','azure-sql']
+draft: true
+summary: 'Learn how to deploy .NET Aspire applications to Azure App Service, Azure SQL Database, and Application Insights instead of the default Container Apps, including AZD configuration and deployment strategies.'
+images: [ '/static/images/deploying-dotnet-aspire-app-service/banner.png' ]
+---
+
+![Banner](/static/images/deploying-dotnet-aspire-app-service/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={2} />
+
+## Introduction
+
+.NET Aspire has transformed how we build cloud-native applications in the .NET ecosystem, providing an opinionated, cloud-ready stack for building observable, distributed applications. 🚀
+
+While Aspire's default deployment story centers around Azure Container Apps, there are compelling scenarios where you might prefer Azure App Services - whether for cost predictability, existing infrastructure investments, or operational simplicity.
+
+### Why Choose App Services Over Container Apps?
+
+In my experience with enterprise teams, App Services offer several advantages:
+
+- **Fixed-tier pricing** that's more predictable for steady workloads
+- **Leverage existing App Service Plans** and infrastructure investments  
+- **Simplified management** familiar to traditional operations teams
+- **Better integration** with existing monitoring and deployment tooling
+
+### Why Choose Azure SQL Database Over Containerized Databases?
+
+While Container Apps can run containerized databases, Azure SQL Database provides significant advantages for production workloads:
+
+- **Managed service benefits** - automatic backups, patching, and high availability without operational overhead
+- **Enterprise-grade security** with built-in threat detection, data encryption, and compliance certifications
+- **Performance and scaling** options including serverless compute and hyperscale storage
+- **Operational excellence** with monitoring, query performance insights, and automatic tuning
+- **Cost optimization** through reserved capacity pricing and pause/resume capabilities
+
+For most enterprise scenarios, the operational simplicity and robust feature set of Azure SQL Database outweigh the flexibility of running database containers. ⚠️
+
+### What We'll Accomplish
+
+This guide walks you through deploying a .NET Aspire application to Azure App Services instead of Container Apps:
+
+✅ **Create a sample Aspire application** with Entity Framework and multiple services  
+✅ **Modify Azure infrastructure** to provision App Services, Azure SQL Database and Application Insights  
+✅ **Configure service-to-service communication** in a App Services environment  
+✅ **Deploy** the complete solution  
+✅ **Monitor** the solution via Open Telemetry and Application Insights  
+
+By the end, you'll understand how to adapt Aspire's deployment model to fit your infrastructure requirements. Let's dive in! 🎯
+
+## Prerequisites
+
+To follow along, ensure you have the following set up:
+
+- [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-macos?view=azure-cli-latest) (AZ) and [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd?tabs=winget-windows,brew-mac,script-linux&pivots=os-mac) (AZD)
+- Aspire CLI (optional)
+- Rider / VS2022 / VS Code
+- Active Azure subscription
+
+## Creating a .NET Aspire Application
+
+At [SSW](https://www.ssw.com.au/) I'm one of the maintainers of the [SSW Clean Archtiecture Template](https://github.com/SSWConsulting/SSW.CleanArchitecture). This template provides a solid foundation for Clean Architecutre, DDD, and Clean Testing. It leverages .NET Aspire to get an enteprise grade API up and running with real data in seconds.
+
+### Creating the solution
+
+```bash
+mkdir AspireWebApp
+cd AspireWebApp
+dotnet new ssw-ca
+```
+
+### Upgrade to .NET Aspire 9.4
+
+At the time of writing, .NET Aspire 9.4 has just been released, so let's upgrade our solution to use the latest version.
+
+Update `AppHost.csproj`:
+
+```xml
+<Sdk Name="Aspire.AppHost.Sdk" Version="9.4.0" />
+```
+
+Upgrade nuget packages:
+
+```bash
+cd tools/AppHost
+dotnet add package Aspire.Hosting.AppHost --version 9.4.0
+dotnet add package Aspire.Microsoft.EntityFrameworkCore.SqlServer --version 9.4.0
+```
+
+### Examining the Aspire Setup
+
+As you can see from both the code and the dashboard below, the solution is composed of:
+
+- SQL Server & Database
+- Migration Service: Handles database migrations and test data seeding
+- API: The main API service with Entity Framework
+
+```cs
+using AppHost.Commands;
+using Projects;
+
+var builder = DistributedApplication.CreateBuilder(args);
+
+var sqlServer = builder
+    .AddSqlServer("sql")
+    .WithLifetime(ContainerLifetime.Persistent);
+
+var db = sqlServer
+    .AddDatabase("clean-architecture")
+    .WithDropDatabaseCommand();
+
+var migrationService = builder.AddProject<MigrationService>("migrations")
+    .WithReference(db)
+    .WaitFor(sqlServer);
+
+builder
+    .AddProject<WebApi>("api")
+    .WithEndpoint("https", endpoint => endpoint.IsProxied = false)
+    .WithReference(db)
+    .WaitForCompletion(migrationService);
+
+builder.Build().Run();
+```
+
+If we navigate to `Tools/AppHost` and run `dotnet run`, we can see the Aspire dashboard:
+
+<figure>
+  <img src="/static/images/deploying-dotnet-aspire-app-service/dashboard.png" alt="Architecture of MCP" />
+  <figcaption>Figure: Aspire dashboard from SSW Clean Architecture template</figcaption>
+</figure>
+
+## AppHost Modification
+
+### Adding Support for Azure SQL Database
+
+1. Add nuget packages
+
+    ```bash
+    cd Tools/AppHost
+    ```
+
+    ```bash
+    dotnet add package Aspire.Hosting.Azure.Sql --prerelease
+    ```
+
+2. Use Azure SQL Database
+
+    ```cs
+    var sqlServer = builder
+        .AddAzureSqlServer("sql")
+        .RunAsContainer(container =>
+        {
+            // Configure SQL Server to run locally as a container
+            container.WithLifetime(ContainerLifetime.Persistent);
+            container.WithHostPort(1800);
+        });
+    ```
+
+    This is setting up SQL Server to be run in two different ways. When deployed to Azure it will use Azure SQL Database, and when running locally it will run in a container.
+
+3. Ensure our Database has an appropriate name and schema
+
+    ```cs
+    var db = sqlServer
+        .AddDatabase("CleanArchitecture", "clean-architecture");
+        // .WithDropDatabaseCommand();
+    ```
+
+    The `WithDropDatabaseCommand` will need to be rewritten to work with Azure SQL Database. For simplicity, we'll remove it for now.
+
+
+### Adding Support for Azure App Services
+
+1. Add nuget packages
+
+    ```bash
+    cd Tools/AppHost
+    ```
+
+    ```bash
+    dotnet add package Aspire.Hosting.Azure.AppService --prerelease
+    ```
+
+2. Add App Service Environment
+
+    ```cs
+    builder.AddAzureAppServiceEnvironment("aspire");
+    ```
+
+    This is needed for the App Service Plan.
+
+3. Configure API to be an Azure App Service
+
+    ```cs
+    builder
+        .AddProject<WebApi>("api")
+        // 👇 Changed
+        .WithExternalHttpEndpoints() 
+        .PublishAsAzureAppServiceWebsite((infra, site) =>
+        {
+            site.SiteConfig.IsWebSocketsEnabled = true;
+            var mySetting = new AppServiceNameValuePair{Name = "MySetting", Value = "MyValue"};
+            site.SiteConfig.AppSettings.Add(new BicepValue<AppServiceNameValuePair>(mySetting));
+
+            // Update other settings like auth or SKU
+        })
+        // 👆 Changed
+        .WithReference(db)
+        .WaitForCompletion(migrationService);
+    ```
+
+    Not only are we configuring our API to be deployed as an Azure App Service, but we are also modifying the configuration to enable WebSockets and add an example app setting. Very powerful! 💪
+
+### Adding Support for Blob Storage
+
+To make things a little more interesting, let's add support for Azure Blob Storage to store files uploaded by users.
+
+1. Add nuget packages
+
+    ```bash
+    cd Tools/AppHost
+    ```
+
+        ```bash
+    dotnet add package Aspire.Hosting.Azure.Storage --prerelease
+    ```
+
+2. Add Azure Blob Storage
+    ```cs
+    // Add Azure Storage Emulator
+    var storage = builder.AddAzureStorage("storage").RunAsEmulator();
+
+    // Add a blob group and a container
+    var blobs = storage.AddBlobs("blobs");
+    var container = blobs.AddBlobContainer("images", blobContainerName: "image-uploads");
+
+    // Add a queues to storage
+    var queue = storage.AddQueues("queues");
+    ```
+
+    When deployed to Azure, this will create an Azure Storage Account with a Blob Container and a Queue. When running locally, it will use the Azure Storage Emulator. 😎
+
+3. For completeness, we'll also need to add the blob reference into the API:
+
+    ```cs
+    .WithReference(blobs)
+    ```
+
+Now if we run our Aspire application locally, we can see the Blob Storage and Queue Storage in the Aspire dashboard.
+
+<figure>
+  <img src="/static/images/deploying-dotnet-aspire-app-service/dashboard2.png" alt="Aspire Dashboard" />
+  <figcaption>Figure: Improved Aspire dashboard</figcaption>
+</figure>
+
+## Deployment Process
+
+Now that we have our Aspire application set up with Azure SQL Database, Azure App Services, and Blob Storage, let's walk through the deployment process using the Azure Developer CLI (AZD).
+
+### Step 1: Authenticate with Azure
+
+1. Ensure you login are logged into the correct Tenant in Azure:
+
+    ```bash
+    azd auth login --tenant-id <tenant-id>
+    ```
+
+### Step 2: Initialize AZD
+
+1. Init AZD
+
+    ```bash
+    cd Tools/AppHost
+    ```
+
+    ```bash
+    azd init
+    ```
+
+    This will initialize the Azure Developer CLI in your project directory.
+
+2. Let AZD scan for your Aspire application
+
+    <figure>
+        <img src="/static/images/deploying-dotnet-aspire-app-service/azd-init-1.png" alt="Aspire Dashboard" />
+        <figcaption>Figure: AZD Init</figcaption>
+    </figure>
+
+2. Confirm
+
+    <figure>
+        <img src="/static/images/deploying-dotnet-aspire-app-service/azd-init-2.png" alt="Aspire Dashboard" />
+        <figcaption>Figure: AZD Init</figcaption>
+    </figure>
+
+2. Init done!
+
+    <figure>
+        <img src="/static/images/deploying-dotnet-aspire-app-service/azd-init-3.png" alt="Aspire Dashboard" />
+        <figcaption>Figure: AZD Init</figcaption>
+    </figure>
+
+### Step 3: Deploy to Azure
+
+The `azd up` command will create the resources defined in the manifest and deploy the application to Azure. This combines `azd package`, `azd provision` and `azd deploy` commands. While `azd up` is convenient, you can also run the commands separately if you need more control over the deployment process.
+
+1. Deploy app
+
+    ```bash
+    azd up
+    ```
+
+
+
+### Step X: Foo
+
+5. Login to the Azure Portal
+
+6. Explore the resources created
+
+    - Container Apps are not used
+    - Azure SQL Database created
+    - App Service Created
+        - Configuration set
+        - Scalar UI can be viewed
+    - Blob Storage created
+
+    ![azure portal](SCR-20250703-iweh.png)
+
+### Step 2: Configure Infrastructure
+- Review and customize Bicep templates
+- Set required parameters
+- Validate resource configurations
+
+### Step 3: Deploy to Azure
+```bash
+azd provision
+azd deploy
+```
+
+### Step 4: Post-Deployment Configuration
+- Database migrations and seeding
+- Application settings verification
+- Health check validation
+
+
+## Alternative Deployment Option
+
+Aspire CLI - `aspire publish`
+
+{/* ## Comparing Deployment Options
+
+### Container Apps vs. App Service
+| Feature | Container App | App Service |
+|---------|---------------|----------|
+| Scaling | Automatic | Manual/Auto |
+| Cost | Pay-per-use | Fixed tier pricing |
+| Management | Kubernetes-like | Traditional hosting |
+
+### When to Choose Each Option
+- Container App: Cloud-native, microservices, variable load
+- App Service: Traditional apps, predictable load, existing infrastructure */}
+
+## Conclusion
+
+- Summary of what we've accomplished
+- Benefits of this deployment approach
+- Next steps and further learning resources
+
+## Additional Resources
+
+- [.NET Aspire Documentation](https://learn.microsoft.com/en-us/dotnet/aspire/)
+- [Azure Developer CLI Reference](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/)
+- [Azure App Services Documentation](https://learn.microsoft.com/en-us/azure/app-service/)
+- [Sample Code Repository](https://github.com/danielmackay/aspire-webapp-deployment)
