@@ -1,6 +1,6 @@
 ---
 title: 'Deploying .NET Aspire to Azure with App Service, Azure SQL and Application Insights'
-date: '2025-08-03'
+date: '2025-08-06'
 tags: ['dotnet', 'aspire', 'azure', 'devops', 'azure-cli', 'application-insights', 'app-sevice','azure-sql']
 draft: true
 summary: 'Learn how to deploy .NET Aspire applications to Azure App Service, Azure SQL Database, and Application Insights instead of the default Container Apps, including AZD configuration and deployment strategies.'
@@ -21,10 +21,10 @@ While Aspire's default deployment story centers around Azure Container Apps, the
 
 In my experience with enterprise teams, App Services offer several advantages:
 
-- **Fixed-tier pricing** that's more predictable for steady workloads
+- **Fixed-tier pricing** that's more predictable for steady workloads  
 - **Leverage existing App Service Plans** and infrastructure investments  
-- **Simplified management** familiar to traditional operations teams
-- **Better integration** with existing monitoring and deployment tooling
+- **Simplified management** familiar to traditional operations teams   
+- **Better integration** with existing monitoring and deployment tooling  
 
 ### Why Choose Azure SQL Database Over Containerized Databases?
 
@@ -45,7 +45,7 @@ This guide walks you through deploying a .NET Aspire application to Azure App Se
 ✅ **Create a sample Aspire application** with Entity Framework and multiple services  
 ✅ **Modify Azure infrastructure** to provision App Services, Azure SQL Database and Application Insights  
 ✅ **Configure service-to-service communication** in a App Services environment  
-✅ **Deploy** the complete solution  
+✅ **Deploy** the complete solution to Azure  
 ✅ **Monitor** the solution via Open Telemetry and Application Insights  
 
 By the end, you'll understand how to adapt Aspire's deployment model to fit your infrastructure requirements. Let's dive in! 🎯
@@ -66,6 +66,7 @@ At [SSW](https://www.ssw.com.au/) I'm one of the maintainers of the [SSW Clean A
 ### Creating the solution
 
 ```bash
+dotnet new install SSW.CleanArchitecture.Template
 mkdir AspireWebApp
 cd AspireWebApp
 dotnet new ssw-ca
@@ -73,7 +74,9 @@ dotnet new ssw-ca
 
 ### Upgrade to .NET Aspire 9.4
 
-At the time of writing, .NET Aspire 9.4 has just been released, so let's upgrade our solution to use the latest version.
+At the time of writing, [.NET Aspire 9.4 has just been released](https://learn.microsoft.com/en-us/dotnet/aspire/whats-new/dotnet-aspire-9.4), so let's upgrade our solution to use the latest version.
+
+Open the solution in your IDE of choice and update the `AppHost` project to use the latest Aspire SDK version.
 
 Update `AppHost.csproj`:
 
@@ -170,7 +173,6 @@ If we navigate to `Tools/AppHost` and run `dotnet run`, we can see the Aspire da
 
     The `WithDropDatabaseCommand` will need to be rewritten to work with Azure SQL Database. For simplicity, we'll remove it for now.
 
-
 ### Adding Support for Azure App Services
 
 1. Add nuget packages
@@ -186,10 +188,41 @@ If we navigate to `Tools/AppHost` and run `dotnet run`, we can see the Aspire da
 2. Add App Service Environment
 
     ```cs
-    builder.AddAzureAppServiceEnvironment("aspire");
+    builder.AddAzureAppServiceEnvironment("aspire").ConfigureInfrastructure(infra =>
+    {
+        var plan = infra.GetProvisionableResources()
+            .OfType<AppServicePlan>()
+            .Single();
+
+        plan.Sku = new AppServiceSkuDescription{ Size = "B1" };
+    });
     ```
 
-    This is needed for the App Service Plan.
+    This is needed for the App Service Plan. Noticed we can configure the SKU of the App Service Plan to be `B1`, which is a basic plan suitable for development and testing.
+
+3. Configure Migration Service to be an Azure App Service
+
+    ```cs
+    var migrationService = builder.AddProject<MigrationService>("migrations")
+        // 👇 Changed
+        .PublishAsAzureAppServiceWebsite((infra, site) =>
+        {
+            // Needed for hosted service to run
+            site.SiteConfig.IsAlwaysOn = true;
+
+            // Dynamically set environment so we can enable seeding of data
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            var envSetting = new AppServiceNameValuePair { Name = "ASPNETCORE_ENVIRONMENT", Value = environment };
+            site.SiteConfig.AppSettings.Add(new BicepValue<AppServiceNameValuePair>(envSetting));
+        })
+        // 👆 Changed
+        .WithReference(db)
+        .WaitFor(sqlServer);
+    ```
+
+    This is configuring the Migration Service to be deployed as an Azure App Service. 
+    
+    Notice we can access the underlying infrastructure to enable configuration such as `IsAlwaysOn` and setting environment variables. This is very powerful as it allows us to configure the App Service in a way that suits our needs. 💪
 
 3. Configure API to be an Azure App Service
 
@@ -198,24 +231,15 @@ If we navigate to `Tools/AppHost` and run `dotnet run`, we can see the Aspire da
         .AddProject<WebApi>("api")
         // 👇 Changed
         .WithExternalHttpEndpoints() 
-        .PublishAsAzureAppServiceWebsite((infra, site) =>
-        {
-            site.SiteConfig.IsWebSocketsEnabled = true;
-            var mySetting = new AppServiceNameValuePair{Name = "MySetting", Value = "MyValue"};
-            site.SiteConfig.AppSettings.Add(new BicepValue<AppServiceNameValuePair>(mySetting));
-
-            // Update other settings like auth or SKU
-        })
+        .PublishAsAzureAppServiceWebsite((infra, site) => ())
         // 👆 Changed
         .WithReference(db)
         .WaitForCompletion(migrationService);
     ```
 
-    Not only are we configuring our API to be deployed as an Azure App Service, but we are also modifying the configuration to enable WebSockets and add an example app setting. Very powerful! 💪
+### Adding Support Application Insights
 
-### Adding Support for Blob Storage
-
-To make things a little more interesting, let's add support for Azure Blob Storage to store files uploaded by users.
+Let's add Application Insights to our Aspire application to monitor performance and errors. We will only add this when deploying to Azure, as we can a combination of OpenTelemetry and the Aspire Dashboard to monitor our application locally.
 
 1. Add nuget packages
 
@@ -224,44 +248,41 @@ To make things a little more interesting, let's add support for Azure Blob Stora
     ```
 
         ```bash
-    dotnet add package Aspire.Hosting.Azure.Storage --prerelease
+    dotnet add package Aspire.Hosting.Azure.ApplicationInsights
     ```
 
-2. Add Azure Blob Storage
-    ```cs
-    // Add Azure Storage Emulator
-    var storage = builder.AddAzureStorage("storage").RunAsEmulator();
-
-    // Add a blob group and a container
-    var blobs = storage.AddBlobs("blobs");
-    var container = blobs.AddBlobContainer("images", blobContainerName: "image-uploads");
-
-    // Add a queues to storage
-    var queue = storage.AddQueues("queues");
-    ```
-
-    When deployed to Azure, this will create an Azure Storage Account with a Blob Container and a Queue. When running locally, it will use the Azure Storage Emulator. 😎
-
-3. For completeness, we'll also need to add the blob reference into the API:
+2. Add Application Insights to the Aspire application
 
     ```cs
-    .WithReference(blobs)
+    if (builder.ExecutionContext.IsPublishMode)
+    {
+        var logAnalytics = builder.AddAzureLogAnalyticsWorkspace("log-analytics");
+        var insights = builder.AddAzureApplicationInsights("insights", logAnalytics);
+        api.WithReference(insights);
+        migrationService.WithReference(insights);
+    }
     ```
 
-Now if we run our Aspire application locally, we can see the Blob Storage and Queue Storage in the Aspire dashboard.
+    This will add Application Insights to the Aspire application only when publishing to Azure. Notice we are also adding a Log Analytics Workspace, which is required for Application Insights to work properly.
+
+    Only when we are using Application Insights, do we need to add the references to `api` and `migrationService` projects.
+
+TODO: Test if log-analytics is still required
+
+{/* Now if we run our Aspire application locally, we can see the Blob Storage and Queue Storage in the Aspire dashboard.
 
 <figure>
-  <img src="/static/images/deploying-dotnet-aspire-app-service/dashboard2.png" alt="Aspire Dashboard" />
+  <img src="/static/images/deploying-dotnet-aspire-app-service/dashboard.png" alt="Aspire Dashboard" />
   <figcaption>Figure: Improved Aspire dashboard</figcaption>
-</figure>
+</figure> */}
 
 ## Deployment Process
 
-Now that we have our Aspire application set up with Azure SQL Database, Azure App Services, and Blob Storage, let's walk through the deployment process using the Azure Developer CLI (AZD).
+Now that we have our Aspire application set up with Azure SQL Database, Azure App Services and Application Insights, let's walk through the deployment process using the Azure Developer CLI (AZD).
 
 ### Step 1: Authenticate with Azure
 
-1. Ensure you login are logged into the correct Tenant in Azure:
+1. Ensure you are logged into the correct Tenant in Azure:
 
     ```bash
     azd auth login --tenant-id <tenant-id>
@@ -302,7 +323,15 @@ Now that we have our Aspire application set up with Azure SQL Database, Azure Ap
         <figcaption>Figure: AZD Init</figcaption>
     </figure>
 
-### Step 3: Deploy to Azure
+### Step 3: Set Environment Variables
+
+1. In order for the `MigrationService` to seed the database with test data, we need to set the `ASPNETCORE_ENVIRONMENT` environment variable to `Development`. 
+
+    ```bash
+    azd env set ASPNETCORE_ENVIRONMENT Development
+    ```
+
+### Step 5: Deploy to Azure
 
 The `azd up` command will create the resources defined in the manifest and deploy the application to Azure. This combines `azd package`, `azd provision` and `azd deploy` commands. While `azd up` is convenient, you can also run the commands separately if you need more control over the deployment process.
 
@@ -311,8 +340,6 @@ The `azd up` command will create the resources defined in the manifest and deplo
     ```bash
     azd up
     ```
-
-
 
 ### Step X: Foo
 
@@ -325,7 +352,7 @@ The `azd up` command will create the resources defined in the manifest and deplo
     - App Service Created
         - Configuration set
         - Scalar UI can be viewed
-    - Blob Storage created
+    - Application Insights created
 
     ![azure portal](SCR-20250703-iweh.png)
 
@@ -348,7 +375,9 @@ azd deploy
 
 ## Alternative Deployment Option
 
-Aspire CLI - `aspire publish`
+If you want full control over the deployment process, but don't want to start from scratch you can run `aspire publish` to generate the Bicep templates and modify them to suit your needs.
+
+You can then take the modified Bicep templates and deploy them using the `aspire deploy` command.
 
 {/* ## Comparing Deployment Options
 
