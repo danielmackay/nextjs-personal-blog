@@ -72,26 +72,6 @@ cd AspireWebApp
 dotnet new ssw-ca
 ```
 
-### Upgrade to .NET Aspire 9.4
-
-At the time of writing, [.NET Aspire 9.4 has just been released](https://learn.microsoft.com/en-us/dotnet/aspire/whats-new/dotnet-aspire-9.4), so let's upgrade our solution to use the latest version.
-
-Open the solution in your IDE of choice and update the `AppHost` project to use the latest Aspire SDK version.
-
-Update `AppHost.csproj`:
-
-```xml
-<Sdk Name="Aspire.AppHost.Sdk" Version="9.4.0" />
-```
-
-Upgrade nuget packages:
-
-```bash
-cd tools/AppHost
-dotnet add package Aspire.Hosting.AppHost --version 9.4.0
-dotnet add package Aspire.Microsoft.EntityFrameworkCore.SqlServer --version 9.4.0
-```
-
 ### Examining the Aspire Setup
 
 As you can see from both the code and the dashboard below, the solution is composed of:
