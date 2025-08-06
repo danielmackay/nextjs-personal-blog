@@ -65,8 +65,15 @@ At [SSW](https://www.ssw.com.au/) I'm one of the maintainers of the [SSW Clean A
 
 ### Creating the solution
 
+Install the Clean Architecture template:
+
 ```bash
 dotnet new install SSW.CleanArchitecture.Template
+```
+
+Create the directory and solution:
+
+```bash
 mkdir AspireWebApp
 cd AspireWebApp
 dotnet new ssw-ca
@@ -137,6 +144,8 @@ If we navigate to `Tools/AppHost` and run `dotnet run`, we can see the Aspire da
         {
             // Configure SQL Server to run locally as a container
             container.WithLifetime(ContainerLifetime.Persistent);
+
+            // NOTE: this can be removed if you want a random port
             container.WithHostPort(1800);
         });
     ```
@@ -174,11 +183,14 @@ If we navigate to `Tools/AppHost` and run `dotnet run`, we can see the Aspire da
             .OfType<AppServicePlan>()
             .Single();
 
-        plan.Sku = new AppServiceSkuDescription{ Size = "B1" };
+        plan.Sku = new AppServiceSkuDescription
+        {
+            Name = "B1", // Basic tier, 1 core
+        };
     });
     ```
 
-    This is needed for the App Service Plan. Noticed we can configure the SKU of the App Service Plan to be `B1`, which is a basic plan suitable for development and testing.
+    This is needed for the App Service Plan. Here we also have the opportunity to configure the SKU of the App Service Plan to be `B1`, which is a basic plan suitable for development and testing. Azure will usually default to a premium plan, so we can save money by doing this. 🤑
 
 3. Configure Migration Service to be an Azure App Service
 
@@ -207,14 +219,14 @@ If we navigate to `Tools/AppHost` and run `dotnet run`, we can see the Aspire da
 3. Configure API to be an Azure App Service
 
     ```cs
-    builder
+    // 👇 Changed
+    var api = builder
         .AddProject<WebApi>("api")
-        // 👇 Changed
         .WithExternalHttpEndpoints() 
-        .PublishAsAzureAppServiceWebsite((infra, site) => ())
-        // 👆 Changed
+        .PublishAsAzureAppServiceWebsite((infra, site) => {})
         .WithReference(db)
         .WaitForCompletion(migrationService);
+    // 👆 Changed
     ```
 
 ### Adding Support Application Insights
@@ -247,26 +259,19 @@ Let's add Application Insights to our Aspire application to monitor performance 
 
     Only when we are using Application Insights, do we need to add the references to `api` and `migrationService` projects.
 
-TODO: Test if log-analytics is still required
-
-{/* Now if we run our Aspire application locally, we can see the Blob Storage and Queue Storage in the Aspire dashboard.
-
-<figure>
-  <img src="/static/images/deploying-dotnet-aspire-app-service/dashboard.png" alt="Aspire Dashboard" />
-  <figcaption>Figure: Improved Aspire dashboard</figcaption>
-</figure> */}
-
 ## Deployment Process
 
 Now that we have our Aspire application set up with Azure SQL Database, Azure App Services and Application Insights, let's walk through the deployment process using the Azure Developer CLI (AZD).
 
 ### Step 1: Authenticate with Azure
 
-1. Ensure you are logged into the correct Tenant in Azure:
+Ensure you are logged into the correct Tenant in Azure:
 
     ```bash
-    azd auth login --tenant-id <tenant-id>
+    azd auth login
     ```
+
+Note, you can also use `azd auth login --tenant-id <tenant-id>` if you want to login directly to a specific tenant. 
 
 ### Step 2: Initialize AZD
 
@@ -286,46 +291,55 @@ Now that we have our Aspire application set up with Azure SQL Database, Azure Ap
 
     <figure>
         <img src="/static/images/deploying-dotnet-aspire-app-service/azd-init-1.png" alt="Aspire Dashboard" />
-        <figcaption>Figure: AZD Init</figcaption>
+        <figcaption>Figure: azd init</figcaption>
     </figure>
 
 2. Confirm
 
     <figure>
         <img src="/static/images/deploying-dotnet-aspire-app-service/azd-init-2.png" alt="Aspire Dashboard" />
-        <figcaption>Figure: AZD Init</figcaption>
+        <figcaption>Figure: azd init</figcaption>
     </figure>
 
 2. Init done!
 
     <figure>
         <img src="/static/images/deploying-dotnet-aspire-app-service/azd-init-3.png" alt="Aspire Dashboard" />
-        <figcaption>Figure: AZD Init</figcaption>
+        <figcaption>Figure: azd init</figcaption>
     </figure>
 
 ### Step 3: Set Environment Variables
 
-1. In order for the `MigrationService` to seed the database with test data, we need to set the `ASPNETCORE_ENVIRONMENT` environment variable to `Development`. 
+In order for the `MigrationService` to seed the database with test data, we need to set the `ASPNETCORE_ENVIRONMENT` environment variable to `Development`:
 
     ```bash
     azd env set ASPNETCORE_ENVIRONMENT Development
     ```
 
-### Step 5: Deploy to Azure
+### Step 4: Deploy to Azure
 
 The `azd up` command will create the resources defined in the manifest and deploy the application to Azure. This combines `azd package`, `azd provision` and `azd deploy` commands. While `azd up` is convenient, you can also run the commands separately if you need more control over the deployment process.
 
-1. Deploy app
+Deploy app:
 
     ```bash
     azd up
     ```
 
-### Step X: Foo
+This will ask you to confirm the subscription and the region you want to deploy to.
 
-5. Login to the Azure Portal
+    <figure>
+        <img src="/static/images/deploying-dotnet-aspire-app-service/azd-up.png" alt="azd up" />
+        <figcaption>Figure: azd up</figcaption>
+    </figure>
 
-6. Explore the resources created
+### Step 5: Confirm Deployment
+
+TODO: UP TO HERE
+
+1. Login to the Azure Portal
+
+2. Explore the resources created
 
     - Container Apps are not used
     - Azure SQL Database created
@@ -334,43 +348,8 @@ The `azd up` command will create the resources defined in the manifest and deplo
         - Scalar UI can be viewed
     - Application Insights created
 
-    ![azure portal](SCR-20250703-iweh.png)
+    {/* ![azure portal](SCR-20250703-iweh.png) */}
 
-### Step 2: Configure Infrastructure
-- Review and customize Bicep templates
-- Set required parameters
-- Validate resource configurations
-
-### Step 3: Deploy to Azure
-```bash
-azd provision
-azd deploy
-```
-
-### Step 4: Post-Deployment Configuration
-- Database migrations and seeding
-- Application settings verification
-- Health check validation
-
-
-## Alternative Deployment Option
-
-If you want full control over the deployment process, but don't want to start from scratch you can run `aspire publish` to generate the Bicep templates and modify them to suit your needs.
-
-You can then take the modified Bicep templates and deploy them using the `aspire deploy` command.
-
-{/* ## Comparing Deployment Options
-
-### Container Apps vs. App Service
-| Feature | Container App | App Service |
-|---------|---------------|----------|
-| Scaling | Automatic | Manual/Auto |
-| Cost | Pay-per-use | Fixed tier pricing |
-| Management | Kubernetes-like | Traditional hosting |
-
-### When to Choose Each Option
-- Container App: Cloud-native, microservices, variable load
-- App Service: Traditional apps, predictable load, existing infrastructure */}
 
 ## Conclusion
 
