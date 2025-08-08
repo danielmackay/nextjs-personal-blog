@@ -55,7 +55,7 @@ By the end, you'll understand how to adapt Aspire's deployment model to fit your
 To follow along, ensure you have the following set up:
 
 - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-macos?view=azure-cli-latest) (AZ) and [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd?tabs=winget-windows,brew-mac,script-linux&pivots=os-mac) (AZD)
-- Aspire CLI (optional)
+- [Aspire CLI](https://learn.microsoft.com/en-us/dotnet/aspire/cli/install?tabs=unix) (optional)
 - Rider / VS2022 / VS Code
 - Active Azure subscription
 
@@ -123,7 +123,9 @@ If we navigate to `Tools/AppHost` and run `dotnet run`, we can see the Aspire da
 
 ## AppHost Modification
 
-### Adding Support for Azure SQL Database
+Let's get started with modifying `AppHost.cs` to adapt the Aspire application to use Azure App Services, Azure SQL Database, and Application Insights.
+
+### Adding Azure SQL Database
 
 1. Add nuget packages
 
@@ -162,7 +164,7 @@ If we navigate to `Tools/AppHost` and run `dotnet run`, we can see the Aspire da
 
     The `WithDropDatabaseCommand` will need to be rewritten to work with Azure SQL Database. For simplicity, we'll remove it for now.
 
-### Adding Support for Azure App Services
+### Adding Azure App Services
 
 1. Add nuget packages
 
@@ -229,7 +231,7 @@ If we navigate to `Tools/AppHost` and run `dotnet run`, we can see the Aspire da
     // 👆 Changed
     ```
 
-### Adding Support Application Insights
+### Adding Application Insights
 
 Let's add Application Insights to our Aspire application to monitor performance and errors. We will only add this when deploying to Azure, as we can a combination of OpenTelemetry and the Aspire Dashboard to monitor our application locally.
 
@@ -265,13 +267,13 @@ Now that we have our Aspire application set up with Azure SQL Database, Azure Ap
 
 ### Step 1: Authenticate with Azure
 
-Ensure you are logged into the correct Tenant in Azure:
+1. Ensure you are logged into the correct Tenant in Azure:
 
     ```bash
     azd auth login
     ```
 
-Note, you can also use `azd auth login --tenant-id <tenant-id>` if you want to login directly to a specific tenant. 
+    Note, you can also use `azd auth login --tenant-id <tenant-id>` if you want to login directly to a specific tenant. 
 
 ### Step 2: Initialize AZD
 
@@ -312,6 +314,8 @@ Note, you can also use `azd auth login --tenant-id <tenant-id>` if you want to l
 
 In order for the `MigrationService` to seed the database with test data, we need to set the `ASPNETCORE_ENVIRONMENT` environment variable to `Development`:
 
+1. Update environment variables
+
     ```bash
     azd env set ASPNETCORE_ENVIRONMENT Development
     ```
@@ -320,18 +324,18 @@ In order for the `MigrationService` to seed the database with test data, we need
 
 The `azd up` command will create the resources defined in the manifest and deploy the application to Azure. This combines `azd package`, `azd provision` and `azd deploy` commands. While `azd up` is convenient, you can also run the commands separately if you need more control over the deployment process.
 
-Deploy app:
+1. Deploy app:
 
     ```bash
     azd up
     ```
 
-This will ask you to confirm the subscription and the region you want to deploy to.
+    This will ask you to confirm the subscription and the region you want to deploy to.
 
-<figure>
-    <img src="/static/images/deploying-dotnet-aspire-app-service/azd-up.png" alt="azd up" />
-    <figcaption>Figure: azd up</figcaption>
-</figure>
+    <figure>
+        <img src="/static/images/deploying-dotnet-aspire-app-service/azd-up.png" alt="azd up" />
+        <figcaption>Figure: azd up</figcaption>
+    </figure>
 
 ### Step 5: Confirm Deployment
 
@@ -387,13 +391,19 @@ This will ask you to confirm the subscription and the region you want to deploy 
 
 ## Conclusion
 
-- Summary of what we've accomplished
-- Benefits of this deployment approach
-- Next steps and further learning resources
+Over this walkthrough the Aspire solution was adapted from a default container-first model to a managed Azure posture: Azure SQL Database instead of a containerized instance, two web workloads (API + migration/seed service) published as Azure App Services on a cost-efficient B1 plan. We also added conditional wiring of Application Insights + Log Analytics only in publish mode, and a repeatable lifecycle driven by the Azure Developer CLI. The result is a predictable, governance-friendly deployment surface that still preserves Aspire's local developer ergonomics and ordered startup (migrations before API) while enabling managed identities, observability and controlled spend.
+
+If you're thinking about where to go from here, consider add a CI/CD pipeline invoking `azd provision` + `azd deploy` separately for finer control in the appropriate stages of your deployment process.
+
+I hope you've found this helpful to see how Aspire can be use to customize Azure deployment to fit your needs. If you have any questions or suggestions for future articles, please let me know in the comments below or on social media. 🚀
+
+## Sample Code
+
+This code for this article can be found on [GitHub](https://github.com/danielmackay/aspire-azure-blog-example)
 
 ## Additional Resources
 
 - [.NET Aspire Documentation](https://learn.microsoft.com/en-us/dotnet/aspire/)
+- [.NET Aspire 9.4 - Whats new](https://learn.microsoft.com/en-us/dotnet/aspire/whats-new/dotnet-aspire-9.4)
 - [Azure Developer CLI Reference](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/)
 - [Azure App Services Documentation](https://learn.microsoft.com/en-us/azure/app-service/)
-- [Sample Code Repository](https://github.com/danielmackay/aspire-webapp-deployment)
