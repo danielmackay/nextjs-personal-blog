@@ -1,6 +1,6 @@
 ---
 title: 'Deploying .NET Aspire to Azure with App Service, Azure SQL and Application Insights'
-date: '2025-08-06'
+date: '2025-08-08'
 tags: ['dotnet', 'aspire', 'azure', 'devops', 'azure-cli', 'application-insights', 'app-sevice','azure-sql']
 draft: true
 summary: 'Learn how to deploy .NET Aspire applications to Azure App Service, Azure SQL Database, and Application Insights instead of the default Container Apps, including AZD configuration and deployment strategies.'
@@ -328,27 +328,61 @@ Deploy app:
 
 This will ask you to confirm the subscription and the region you want to deploy to.
 
-    <figure>
-        <img src="/static/images/deploying-dotnet-aspire-app-service/azd-up.png" alt="azd up" />
-        <figcaption>Figure: azd up</figcaption>
-    </figure>
+<figure>
+    <img src="/static/images/deploying-dotnet-aspire-app-service/azd-up.png" alt="azd up" />
+    <figcaption>Figure: azd up</figcaption>
+</figure>
 
 ### Step 5: Confirm Deployment
 
-TODO: UP TO HERE
-
 1. Login to the Azure Portal
 
-2. Explore the resources created
+2. Confirm all resources were created as expected
 
-    - Container Apps are not used
-    - Azure SQL Database created
-    - App Service Created
-        - Configuration set
-        - Scalar UI can be viewed
-    - Application Insights created
+    - Azure App Service for the API
+    - Azure App Service for the Migration Service
+    - Azure SQL Database
+    - Application Insights
+    - Log Analytics Workspace
 
-    {/* ![azure portal](SCR-20250703-iweh.png) */}
+    <figure>
+        <img src="/static/images/deploying-dotnet-aspire-app-service/resource-group.png" alt="resource-group" />
+        <figcaption>Figure: all resources deployed to Azure</figcaption>
+    </figure>
+
+    You will also notice there are a few extra resources that have been configured:
+
+    - **Managed Identities**: These allow us to configure robust security for our services to access the Azure SQL DB without needing to manage secrets.
+    - **Container Registry**: When deploying to App Service on Linux, container images are built and pushed to a container registry. The App Service will pull new images from the registry when deploying application updates.
+    - **Failure Anomolies**: Configures alerts to send emails if there are any 'abnormal failures' in the application. This is useful for monitoring the health of the application.
+
+
+3. Confirm App Service Plan configuration
+
+    We configured Aspire to use a Basic App Service Plan (B1) for cost efficiency. You can confirm this in the Azure Portal:
+
+    <figure>
+        <img src="/static/images/deploying-dotnet-aspire-app-service/app-service-plan.png" alt="app-service-plan" />
+        <figcaption>Figure: App Service Plan is configured as expected</figcaption>
+    </figure>
+
+4. Confirm App Service configuration
+
+    We configured our Migration App Service to be always on, and to use the `ASPNETCORE_ENVIRONMENT` environment variable. You can confirm this in the Azure Portal:
+
+    <figure>
+        <img src="/static/images/deploying-dotnet-aspire-app-service/always-on.png" alt="always-on" />
+        <figcaption>Figure: App Service is configured with 'Always On'</figcaption>
+    </figure>
+
+    We also configured the `ASPNETCORE_ENVIRONMENT` environment variable to be `Development`, which allows the Migration Service to seed the database with test data.
+
+    When deploying to Azure, we also configured Application Insights and Log Analytics Workspace.
+
+    <figure>
+        <img src="/static/images/deploying-dotnet-aspire-app-service/app-service-config.png" alt="app-service-config" />
+        <figcaption>Figure: App Service configuration is as expected</figcaption>
+    </figure>
 
 
 ## Conclusion
