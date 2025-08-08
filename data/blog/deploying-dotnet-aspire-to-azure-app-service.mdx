@@ -159,10 +159,12 @@ Let's get started with modifying `AppHost.cs` to adapt the Aspire application to
     ```cs
     var db = sqlServer
         .AddDatabase("CleanArchitecture", "clean-architecture");
-        // .WithDropDatabaseCommand();
+        //.WithDropDatabaseCommand();
     ```
 
     The `WithDropDatabaseCommand` will need to be rewritten to work with Azure SQL Database. For simplicity, we'll remove it for now.
+
+    The database name must be set to `CleanArchitecture` in order to be used in App Service Configuration. Usages of this in `MigrationService` and `Infrastructure` also need to be updated.
 
 ### Adding Azure App Services
 
@@ -224,8 +226,8 @@ Let's get started with modifying `AppHost.cs` to adapt the Aspire application to
     // 👇 Changed
     var api = builder
         .AddProject<WebApi>("api")
-        .WithExternalHttpEndpoints() 
-        .PublishAsAzureAppServiceWebsite((infra, site) => {})
+        .WithExternalHttpEndpoints()
+        // No need to use builder.PublishAsAzureAppServiceWebsite() here, as that is the default due to builder.AddAzureAppServiceEnvironment()
         .WithReference(db)
         .WaitForCompletion(migrationService);
     // 👆 Changed
