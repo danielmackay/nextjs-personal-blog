@@ -1,0 +1,103 @@
+---
+title: 'From Manual PBI to AI-Powered Conversation: My Journey with GitHub Copilot'
+date: '2025-08-14'
+tags: ['github', 'copilot', 'devops', 'automation']
+draft: true
+summary: 'Discover how I transformed my tedious, manual process for creating Product Backlog Items into a streamlined, conversational workflow using GitHub Copilot, prompt files, and the GitHub MCP Server.'
+images: ['/static/images/automating-pbi-creation-with-github-copilot/banner.png']
+layout: PostLayout
+---
+
+![Banner](/static/images/automating-pbi-creation-with-github-copilot/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## Introduction
+
+As a developer, I'm always looking for ways to optimize my workflow. One of the most tedious, yet critical, tasks I face is creating well-defined Product Backlog Items (PBIs) or user stories. It’s a process that demands careful thought to craft a clear description, acceptance criteria, and relevant notes for the development team. For a long time, this was a completely manual process for me, involving a trip to GitHub.com, navigating to the correct repository, and meticulously filling out issue forms. It was slow, repetitive, and frankly, a bit of a drag. 😫
+
+I knew there had to be a better way. I'd been experimenting with GitHub Copilot and wondered if I could leverage it to streamline this process. This post documents my journey from a fully manual workflow to a sophisticated, conversational system for generating PBIs directly from my editor.
+
+## Solution 1: The Full Manual Slog
+
+Let's set the scene. My initial process was what you might expect:
+1.  Open a browser.
+2.  Navigate to GitHub.com.
+3.  Find the right repository.
+4.  Click "Issues" -> "New Issue".
+5.  Painstakingly write out the title, description, acceptance criteria, and dev notes from scratch.
+6.  Add labels, assignees, and projects.
+
+Every step was manual. It broke my focus and pulled me out of my development environment. The context switch was a killer for productivity.
+
+## Solution 2: My First Prompt and Its Pains
+
+My first step into automation was to create a generic prompt for Copilot Chat. The idea was to generate the *content* of the PBI, which I could then copy and paste into GitHub.
+
+My prompt looked something like this:
+
+```prompt
+You are a Scrum Product Owner. Your task is to create a clear and concise PBI...
+
+Title: Create a PBI title...
+Description: Create a PBI description...
+Acceptance Criteria: ...
+...
+```
+
+While this was a step up from writing everything from scratch, it introduced its own set of problems. The biggest pain point was managing the prompt itself. I had to store it somewhere, find it, copy it, and then paste it into the chat. After generating the text, I still had to go through the whole manual GitHub issue creation dance. It was better, but still clunky and far from seamless.
+
+## Solution 3: Automation with the GitHub MCP Server
+
+This is where things started to get interesting. I discovered the [GitHub MCP (Model Context Protocol) Server](https://github.com/github/github-mcp-server), a tool that allows an AI assistant to interact directly with GitHub. This meant I could not only generate the PBI content but also create the issue in one go.
+
+I refined my prompt to include instructions for the MCP server:
+
+```prompt
+...
+create this PBI in {REPO_NAME} repo in {ORG_NAME} organisation.
+Add only a GitHub label of "{LABEL}"
+Do not include the title in the Github Issue Description
+Give me a short summary including the URL of the created PBI when finished
+...
+```
+
+This was a significant leap forward. I could now generate a PBI and create the corresponding GitHub issue without leaving VS Code. The manual copy-paste was gone! ✅
+
+## Solution 4: The Power of In-Repo Prompt Files
+
+The main issue with my previous iteration was that my awesome prompt was still a free-floating piece of text I had to manage. The solution? GitHub Copilot's 'prompt files' feature. By storing the prompt in a file within the repository itself (e.g., in `.github/prompts/pbi.md`), I could easily reference it and make it specific to the project.
+
+More importantly, I could make the prompt smarter by having it reference other context-rich files in the repo, like a `definition-of-done.md` or, even better, a `copilot-instructions.md`.
+
+When you use GitHub Copilot locally, it scans your codebase to understand your project. You can supercharge this process by creating a `copilot-instructions.md` file that summarizes all the critical information Copilot needs. You can even ask Copilot to generate a first draft of this file for you! (I've attached the one for this blog as an example).
+
+My prompt now looked like this:
+
+```prompt
+...
+The acceptance criteria should always include:
+- Meets [Definition of Done](./docs/definition-of-done.md)
+
+When generating the PBI, reference the [copilot-instructions.md](../copilot-instructions.md) for any additional information...
+...
+```
+
+This was a game-changer. My PBI generation was now context-aware and tailored to the specific project I was working in.
+
+## The "Aha!" Moment: Making it a Conversation
+
+The final tweak to my prompt was the most powerful, and it was my big "Aha!" moment. I added one simple sentence to the end:
+
+`Ask any questions you need to clarify the requirements before creating the PBI.`
+
+This single line transformed the entire interaction. Instead of a "one-shot" command that might miss nuances, Copilot now engages in a conversation with me. It asks clarifying questions to fill in requirement gaps *before* creating the issue. This collaborative back-and-forth ensures the final PBI is far more accurate and complete. It's not just automation; it's a partnership. 🙌
+
+## Summary
+
+My quest to optimize PBI creation took me on a journey from tedious manual work to a sophisticated, conversational workflow. By leveraging GitHub Copilot, the MCP Server, and in-repo prompt files, I've eliminated context switching and created a system that's not only faster but also produces higher-quality results. The final step of enabling a clarifying conversation with Copilot was the key that unlocked its full potential, turning it from a simple code generator into a true development assistant.
+
+## Resources
+
+- **GitHub MCP Server**: [Learn more about how to interact with GitHub via an MCP server.](https://github.com/github/github-mcp-server)
+- **GitHub Copilot**: [Official Website](https://github.com/features/copilot)
