@@ -37,12 +37,21 @@ My first step into automation was to create a generic prompt for Copilot Chat. T
 My prompt looked something like this:
 
 ```prompt
-You are a Scrum Product Owner. Your task is to create a clear and concise PBI...
+You are a Scrum Product Owner. Your task is to create a clear and concise PBI with sufficient information for developers to implement it.
 
-Title: Create a PBI title...
-Description: Create a PBI description...
-Acceptance Criteria: ...
-...
+The PBI should include the following:
+
+Title: Create a PBI title. The title must start with 🐛 Bug - if it's a bug, or ✨ (just the emoji, no extra words) if it's a feature or change.
+Description: Create a PBI description.
+Acceptance Criteria: unordered list of the Acceptance Criteria.
+Dev Notes: Any important implementation notes for the developer. 
+Reproduce Steps: If it's a bug, list the steps to reproduce it. If not, skip this section.
+
+The acceptance criteria should always include:
+- Meets [Definition of Done]({DEFINITION_OF_DONE_URL})
+
+Tasks:
+{TASKS}
 ```
 
 While this was a step up from writing everything from scratch, it introduced its own set of problems. The biggest pain point was managing the prompt itself. I had to store it somewhere, find it, copy it, and then paste it into the chat. After generating the text, I still had to go through the whole manual GitHub issue creation dance. It was better, but still clunky and far from seamless.
@@ -54,12 +63,35 @@ This is where things started to get interesting. I discovered the [GitHub MCP (M
 I refined my prompt to include instructions for the MCP server:
 
 ```prompt
-...
+You are a Scrum Product Owner. Your task is to create a clear and concise PBI with sufficient information for developers to implement it.
+
+The PBI should include the following:
+
+Title: Create a PBI title. The title must start with 🐛 Bug - if it's a bug, or ✨ (just the emoji, no extra words) if it's a feature or change.
+Description: Create a PBI description.
+Acceptance Criteria: unordered list of the Acceptance Criteria.
+Dev Notes: Any important implementation notes for the developer. 
+Reproduce Steps: If it's a bug, list the steps to reproduce it. If not, skip this section.
+
+The acceptance criteria should always include:
+- Meets [Definition of Done]({DEFINITION_OF_DONE_URL})
+
+Tasks:
+{TASKS}
+
+The response should always be in markdown.
+
+Title should be a H2 heading (e.g. ## Title). All other sections should be H3 headings (e.g. ### Description)
+
 create this PBI in {REPO_NAME} repo in {ORG_NAME} organisation.
+
 Add only a GitHub label of "{LABEL}"
+
 Do not include the title in the Github Issue Description
+
 Give me a short summary including the URL of the created PBI when finished
-...
+
+When generating the PBI, reference the [copilot-instructions.md]({REPO_COPILOT_INSTRUCTIONS}) for any additional information you may need about the project.
 ```
 
 This was a significant leap forward. I could now generate a PBI and create the corresponding GitHub issue without leaving VS Code. The manual copy-paste was gone! ✅
@@ -75,12 +107,34 @@ When you use GitHub Copilot locally, it scans your codebase to understand your p
 My prompt now looked like this:
 
 ```prompt
-...
+You are a Scrum Product Owner. Your task is to create a clear and concise PBI with sufficient information for developers to implement it.
+
+The PBI should include the following:
+
+Title: Create a PBI title. The title must start with 🐛 Bug - if it's a bug, or ✨ (just the emoji, no extra words) if it's a feature or change.
+Description: Create a PBI description.
+Acceptance Criteria: unordered list of the Acceptance Criteria.
+Dev Notes: Any important implementation notes for the developer. 
+Reproduce Steps: If it's a bug, list the steps to reproduce it. If not, skip this section.
+
 The acceptance criteria should always include:
 - Meets [Definition of Done](./docs/definition-of-done.md)
 
-When generating the PBI, reference the [copilot-instructions.md](../copilot-instructions.md) for any additional information...
-...
+The response should always be in markdown.
+
+Title should be a H2 heading (e.g. ## Title). All other sections should be H3 headings (e.g. ### Description)
+
+create this PBI in Northwind repo in SSW organisation.
+
+Add only a GitHub label of "Needs Refinement"
+
+Do not include the title in the Github Issue Description
+
+Give me a short summary including the URL of the created PBI when finished
+
+When generating the PBI, reference the [copilot-instructions.md](../copilot-instructions.md) for any additional information you may need about the project.
+
+Ask any questions you need to clarify the requirements before creating the PBI.
 ```
 
 This was a game-changer. My PBI generation was now context-aware and tailored to the specific project I was working in.
@@ -89,7 +143,7 @@ This was a game-changer. My PBI generation was now context-aware and tailored to
 
 The final tweak to my prompt was the most powerful, and it was my big "Aha!" moment. I added one simple sentence to the end:
 
-`Ask any questions you need to clarify the requirements before creating the PBI.`
+> Ask any questions you need to clarify the requirements before creating the PBI
 
 This single line transformed the entire interaction. Instead of a "one-shot" command that might miss nuances, Copilot now engages in a conversation with me. It asks clarifying questions to fill in requirement gaps *before* creating the issue. This collaborative back-and-forth ensures the final PBI is far more accurate and complete. It's not just automation; it's a partnership. 🙌
 
