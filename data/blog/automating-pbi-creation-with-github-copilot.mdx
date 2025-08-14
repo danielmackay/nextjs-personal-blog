@@ -90,8 +90,6 @@ Add only a GitHub label of "{LABEL}"
 Do not include the title in the Github Issue Description
 
 Give me a short summary including the URL of the created PBI when finished
-
-When generating the PBI, reference the [copilot-instructions.md]({REPO_COPILOT_INSTRUCTIONS}) for any additional information you may need about the project.
 ```
 
 This was a significant leap forward. I could now generate a PBI and create the corresponding GitHub issue without leaving VS Code. The manual copy-paste was gone! ✅
@@ -139,13 +137,15 @@ Ask any questions you need to clarify the requirements before creating the PBI.
 
 This was a game-changer. My PBI generation was now context-aware and tailored to the specific project I was working in.
 
-## The "Aha!" Moment: Making it a Conversation
+## The "Aha!" Moment: Context + Conversation
 
-The final tweak to my prompt was the most powerful, and it was my big "Aha!" moment. I added one simple sentence to the end:
+The final tweak to my prompt was powerful, but the true "Aha!" moment came when I combined it with the power of VS Code's integrated environment. The prompt now included this line:
 
-> Ask any questions you need to clarify the requirements before creating the PBI
+> Ask any questions you need to clarify the requirements before creating the PBI.
 
-This single line transformed the entire interaction. Instead of a "one-shot" command that might miss nuances, Copilot now engages in a conversation with me. It asks clarifying questions to fill in requirement gaps *before* creating the issue. This collaborative back-and-forth ensures the final PBI is far more accurate and complete. It's not just automation; it's a partnership. 🙌
+This was just one part of the puzzle. The real magic happens because I'm running Copilot directly within my project in VS Code. This gives it a massive advantage: it has access to the *entire context* of my codebase. It can read my `copilot-instructions.md`, understand my application's architecture from the code itself, and see how different components interact.
+
+This combination is the ultimate game-changer. Between Copilot now having access to relevant knowledge about the project, and being able to ask questions to fill in gaps in the original requirements, I've found Copilot generating suprisingly high quality PBIs every time. It's not just automation; it's a true, context-aware partnership. 🙌
 
 ## Summary
 
