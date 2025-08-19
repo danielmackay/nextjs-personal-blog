@@ -1,5 +1,6 @@
 ---
 applyTo: '*.mdx'
+description: Guidelines for writing technical blog posts 
 ---
 
 ## Blog Authoring Guidelines
