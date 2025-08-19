@@ -95,6 +95,11 @@ Next, ensure the server is started. This should prompt you to authenticate with 
 Now that we can create issues directly, we need to update our prompt to instruct copilot to do so.
 
 ```prompt
+
+Create an Issue in GitHub using the provided prompt.
+
+Do not change any code.
+
 The response should always be in markdown.
 
 Title should be a H2 heading (e.g. ## Title). All other sections should be H3 headings (e.g. ### Description)
@@ -112,6 +117,10 @@ The full prompt now looks like this:
 
 ```prompt
 You are a Scrum Product Owner. Your task is to create a clear and concise PBI with sufficient information for developers to implement it.
+
+Create an Issue in GitHub using the provided prompt.
+
+Do not change any code.
 
 The PBI should include the following:
 
@@ -131,7 +140,7 @@ The response should always be in markdown.
 
 Title should be a H2 heading (e.g. ## Title). All other sections should be H3 headings (e.g. ### Description)
 
-create this PBI in {REPO_NAME} repo in {ORG_NAME} organisation.
+create this Issue in {REPO_NAME} repo in {ORG_NAME} organisation.
 
 Add only a GitHub label of "{LABEL}"
 
@@ -144,22 +153,49 @@ This was a significant leap forward. I could now generate a PBI and create the c
 
 ## Solution 4: The Power of In-Repo Prompt Files
 
-TODO: Up to here
-
 The main issue with my previous iteration was that my awesome prompt was still a free-floating piece of text I had to manage. The solution? GitHub Copilot's 'prompt files' feature. By storing the prompt in a file within the repository itself (e.g., in `.github/prompts/create-pbi.md`), I could easily reference it and make it specific to the project.
 
 More importantly, I could make the prompt smarter by having it reference other context-rich files in the repo, like a `definition-of-done.md` or, even better, a `copilot-instructions.md`.
 
 When you use GitHub Copilot locally within the context of a repository, it scans your codebase to understand your project. You can supercharge this process by creating a `copilot-instructions.md` file that summarizes all the critical information Copilot needs. You can even ask Copilot to generate a first draft of this file for you!
 
-This was a game-changer. My PBI generation was now context-aware and tailored to the specific project I was working in.
+This was gives Copilot superpowers. My PBI generation was now context-aware and tailored to the specific project I was working in.
 
 ### Creating the Prompt file
 
-My prompt now looked like this:
+The easiest way to create the prompt file is to let VS Code guide you. Start by clicking 'Configure Chat' at the top of the Copilot Chat panel. 
+
+<figure>
+  <img src="/static/images/automating-pbi-creation-with-github-copilot/prompt-files.png" alt="Creating a prompt file in VS Code" style={{maxWidth:'500px', margin: 'auto'}} />
+  <figcaption style={{textAlign: 'center'}}>Figure: Creating a prompt file in VS Code</figcaption>
+</figure>
+
+This will prompt you for a name for the new prompt file, and to choose a location for it (defaults to `.github/prompts`).
+
+Besides the prompt there is several pieces of frontmatter that you can add to the file.
+
+- **mode**: This is the mode in which the prompt will be used. For our use case, we want to set it to `agent` so that Copilot can use tools.
+- **model**: This is the model that Copilot will use to generate the response. For our PBI creation, I prefer Gemini 2.5`.
+- **tools**: This is a list of tools that Copilot can use to complete the task. For our PBI creation, we want to include tools like `codebase`, `usages`, `fetch`, `findTestFiles`, `searchResults`, `githubRepo`, `search`, `create_issue`, and `get_issue`.
+- **description**: This is a brief description of what the prompt does. For our PBI creation, we can set it to something like "Create a PBI in GitHub using the provided prompt".
+
+VS Code will open the new prompt file in the editor, and you can paste in your prompt. Save the file, and you're ready to go!
+
+The complete prompt with frontmatter and project specific details now looks like this:
 
 ```prompt
+---
+mode: agent
+model: Gemini 2.5 Pro (Preview)
+tools: ['codebase', 'usages', 'vscodeAPI', 'think', 'problems', 'changes', 'testFailure', 'terminalSelection', 'terminalLastCommand', 'openSimpleBrowser', 'fetch', 'findTestFiles', 'searchResults', 'githubRepo', 'extensions', 'runTests', 'editFiles', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'github']
+description: Create a PBI in GitHub using the provided prompt
+---
+
 You are a Scrum Product Owner. Your task is to create a clear and concise PBI with sufficient information for developers to implement it.
+
+Create an Issue in GitHub using the provided prompt.
+
+Do not change any code.
 
 The PBI should include the following:
 
@@ -191,7 +227,23 @@ Ask any questions you need to clarify the requirements before creating the PBI.
 
 ### Using Prompts
 
-TODO
+Now that we have our prompt file set up, we can use it directly in Copilot Chat. When you start a new chat, you can select the prompt file you created, and Copilot will use it to generate the PBI.
+
+There are several ways to use this. You can using the VS Code command palette and select `Chat: Run Prompt...`. You can drag the prompt file into the chat panel. I prefer to use slash commands like `/create-pbi` directly in the chat panel.
+
+<figure>
+  <img src="/static/images/automating-pbi-creation-with-github-copilot/create-pbi-prompt.png" alt="Using Copilot Chat with prompt files" style={{maxWidth:'500px', margin: 'auto'}} />
+  <figcaption style={{textAlign: 'center'}}>Figure: Using Copilot Chat with prompt files</figcaption>
+</figure>
+
+The following PBI was created: 
+
+<figure>
+  <img src="/static/images/automating-pbi-creation-with-github-copilot/issue.png" alt="PBI created in GitHub" />
+  <figcaption style={{textAlign: 'center'}}>Figure: [PBI created in GitHub](https://github.com/danielmackay/nextjs-personal-blog/issues/150)</figcaption>
+</figure>
+
+
 
 ## The "Aha!" Moment: Context + Conversation
 
@@ -201,7 +253,9 @@ The final tweak to my prompt was powerful, but the true "Aha!" moment came when 
 
 This was just one part of the puzzle. The real magic happens because I'm running Copilot directly within my project in VS Code. This gives it a massive advantage: it has access to the *entire context* of my codebase. It can read my `copilot-instructions.md`, understand my application's architecture from the code itself, and see how different components interact.
 
-This combination is the ultimate game-changer. Between Copilot now having access to relevant knowledge about the project, and being able to ask questions to fill in gaps in the original requirements, I've found Copilot generating suprisingly high quality PBIs every time. It's not just automation; it's a true, context-aware partnership. 🙌
+This combination is the ultimate PBI superpower! 🦸‍♂️. 
+
+Between Copilot now having access to relevant knowledge about the project, and being able to ask questions to fill in gaps in the original requirements, I've found Copilot generating suprisingly high quality PBIs every time. It's not just automation; it's a true, context-aware partnership. 🙌
 
 ## Bonus Round: What About Video?
 
