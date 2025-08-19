@@ -1,6 +1,6 @@
 ---
 title: 'From Manual PBIs to AI-Powered Conversations: Product Backlog Management with GitHub Copilot'
-date: '2025-08-14'
+date: '2025-08-20'
 tags: ['github', 'copilot', 'devops', 'automation', 'scrum']
 draft: true
 summary: 'Discover how I transformed my tedious, manual process for creating Product Backlog Items into a streamlined, conversational workflow using GitHub Copilot, prompt files, and the GitHub MCP Server.'
@@ -146,11 +146,11 @@ This was a significant leap forward. I could now generate a PBI and create the c
 
 TODO: Up to here
 
-The main issue with my previous iteration was that my awesome prompt was still a free-floating piece of text I had to manage. The solution? GitHub Copilot's 'prompt files' feature. By storing the prompt in a file within the repository itself (e.g., in `.github/prompts/pbi.md`), I could easily reference it and make it specific to the project.
+The main issue with my previous iteration was that my awesome prompt was still a free-floating piece of text I had to manage. The solution? GitHub Copilot's 'prompt files' feature. By storing the prompt in a file within the repository itself (e.g., in `.github/prompts/create-pbi.md`), I could easily reference it and make it specific to the project.
 
 More importantly, I could make the prompt smarter by having it reference other context-rich files in the repo, like a `definition-of-done.md` or, even better, a `copilot-instructions.md`.
 
-When you use GitHub Copilot locally, it scans your codebase to understand your project. You can supercharge this process by creating a `copilot-instructions.md` file that summarizes all the critical information Copilot needs. You can even ask Copilot to generate a first draft of this file for you! (I've attached the one for this blog as an example).
+When you use GitHub Copilot locally within the context of a repository, it scans your codebase to understand your project. You can supercharge this process by creating a `copilot-instructions.md` file that summarizes all the critical information Copilot needs. You can even ask Copilot to generate a first draft of this file for you!
 
 This was a game-changer. My PBI generation was now context-aware and tailored to the specific project I was working in.
 
@@ -203,7 +203,7 @@ This was just one part of the puzzle. The real magic happens because I'm running
 
 This combination is the ultimate game-changer. Between Copilot now having access to relevant knowledge about the project, and being able to ask questions to fill in gaps in the original requirements, I've found Copilot generating suprisingly high quality PBIs every time. It's not just automation; it's a true, context-aware partnership. 🙌
 
-## Bonus Round: What About Video? 🎥
+## Bonus Round: What About Video?
 
 My journey has been all about perfecting a text-based workflow, which, as a developer, fits me like a glove. But I've worked with enough Product Owners to know that sometimes, talking and showing is way faster than typing. Explaining a tricky UI bug or a complex user flow can be a pain to write out.
 
