@@ -7,18 +7,23 @@ type Props = Omit<ImageProps, 'src' | 'priority' | 'loading'> & {
   srcDark: string
 }
 const ThemeImage = (props: Props) => {
-  const [showLight, setShowLight] = useState(false)
-  const { theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const { resolvedTheme } = useTheme()
   const { srcLight, srcDark, ...rest } = props
 
-  useEffect(() => {
-    setShowLight(theme === 'dark')
-  }, [theme])
+  // When mounted on client, now we can show the UI
+  useEffect(() => setMounted(true), [])
+
+  if (!mounted) {
+    return null
+  }
+
+  const isDark = resolvedTheme === 'dark'
 
   return (
     <>
-      <Image {...rest} src={srcLight} className={`${showLight ? 'hidden' : ''}`} />
-      <Image {...rest} src={srcDark} className={`${showLight ? '' : 'hidden'}`} />
+      <Image {...rest} src={srcLight} className={`${isDark ? 'hidden' : ''}`} />
+      <Image {...rest} src={srcDark} className={`${isDark ? '' : 'hidden'}`} />
     </>
   )
 }
