@@ -200,11 +200,6 @@ public class MonkeyRepository
         return _monkeys.AsReadOnly();
     }
 
-    public Monkey? GetById(Guid id)
-    {
-        return _monkeys.FirstOrDefault(m => m.Id == id);
-    }
-
     public bool Delete(Guid id)
     {
         var monkey = GetById(id);
@@ -397,17 +392,11 @@ public class CreateMonkeyValidator : Validator<CreateMonkeyRequest>
 {
     public CreateMonkeyValidator()
     {
-        RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("Monkey needs a name!")
-            .MinimumLength(2).WithMessage("Name must be at least 2 characters")
-            .MaximumLength(50).WithMessage("Name must not exceed 50 characters");
-
-        RuleFor(x => x.Age)
-            .GreaterThan(0).WithMessage("Age must be positive")
-            .LessThan(50).WithMessage("That's one old monkey! Max age is 50");
-
+        RuleFor(x => x.Name).NotEmpty();
+        RuleFor(x => x.Age).GreaterThan(0);
         RuleFor(x => x.Temperament)
-            .IsInEnum().WithMessage("Invalid temperament value");
+            .Must(temperament => Enum.TryParse<Common.Domain.Monkeys.Temperament>(temperament, true, out _))
+            .WithMessage("Temperament must be a valid value.");
     }
 }
 
@@ -420,18 +409,17 @@ public class CreateMonkeyEndpoint(MonkeyRepository repository)
     {
         Post("/api/monkeys");
         AllowAnonymous();
+        DontThrowIfValidationFails();
     }
 
     public override async Task HandleAsync(CreateMonkeyRequest req, CancellationToken ct)
     {
-        // Validation happens automatically before this method is called!
-        
-        // Custom business logic
-        var existingMonkeys = repository.GetAll();
-        if (existingMonkeys.Any(m => m.Name.Equals(req.Name, StringComparison.OrdinalIgnoreCase)))
+        // NOTE: This could be custom logic (as below) or a result from your domain layer
+        var monkeyCount = repository.GetAll().Count;
+        if (monkeyCount >= 5)
         {
-            AddError(m => m.Name, "A monkey with this name already exists");
-            await SendErrorsAsync(cancellation: ct);
+            AddError("Monkey limit reached. Cannot add more monkeys.");
+            await Send.ErrorsAsync(cancellation: ct);
             return;
         }
 
@@ -479,6 +467,8 @@ Response:
 ```
 
 Beautiful! 🎨
+
+Using `DontThrowIfValidationFails()` allows our handler to run so we can return both FluentValidation errors and custom business logic errors in one response.
 
 **Validation Without the Plumbing** - If you've used MediatR for validation, you know the pain: creating a custom pipeline behavior, scanning for validators at runtime, wiring up the correct one, executing it, mapping results into some intermediate response format, then translating that into proper HTTP status codes. It's a lot of ceremony for what should be straightforward. With FastEndpoints, all that plumbing vanishes. Validators are automatically discovered by convention, executed before your handler runs, and failures are immediately translated into `400 Bad Request` responses with properly formatted error details. No custom behaviors, no middleware, no manual mapping—it just works out of the box. ✨
 
@@ -528,50 +518,7 @@ FastEndpoints automatically binds the `{id}` route parameter to the `Id` propert
 - Headers: `X-Monkey-Id: 123`
 - Request body: JSON properties
 
-You can also create a GET by ID endpoint. Create `Features/Monkeys/GetMonkeyByIdEndpoint.cs`:
-
-```csharp
-using FastEndpoints;
-using FastWebApi.Common.Persistence;
-
-namespace FastWebApi.Features.Monkeys;
-
-public record GetMonkeyByIdRequest
-{
-    public Guid Id { get; init; }
-}
-
-public record GetMonkeyByIdResponse(Guid Id, string Name, int Age, string Temperament);
-
-public class GetMonkeyByIdEndpoint(MonkeyRepository repository) 
-    : Endpoint<GetMonkeyByIdRequest, GetMonkeyByIdResponse>
-{
-    public override void Configure()
-    {
-        Get("/api/monkeys/{id}");
-        AllowAnonymous();
-    }
-
-    public override async Task HandleAsync(GetMonkeyByIdRequest req, CancellationToken ct)
-    {
-        var monkey = repository.GetById(req.Id);
-
-        if (monkey is null)
-        {
-            await SendNotFoundAsync(ct);
-            return;
-        }
-
-        var response = new GetMonkeyByIdResponse(
-            monkey.Id,
-            monkey.Name,
-            monkey.Age,
-            monkey.Temperament.ToString());
-
-        await SendOkAsync(response, ct);
-    }
-}
-```
+See [Model Binding](https://fast-endpoints.com/docs/model-binding) for more details.
 
 Test the delete:
 
@@ -581,32 +528,39 @@ curl -X DELETE https://localhost:5001/api/monkeys/{id}
 
 ## Adding Support for API Groups
 
-As your API grows, organizing endpoints into logical groups becomes essential. FastEndpoints supports API versioning and grouping out of the box.
+As your API grows, organizing endpoints into logical groups becomes essential. FastEndpoints supports API versioning and grouping out of the box. Groups let you define shared configuration for related endpoints in one place.
 
-Create a base configuration class `Features/Monkeys/MonkeyGroup.cs`:
+Create `Features/Monkeys/Endpoints/MonkeyGroup.cs`:
 
 ```csharp
-using FastEndpoints;
+using FastEndpoints.Swagger;
 
-namespace FastWebApi.Features.Monkeys;
+namespace FastWebApi.Features.Monkeys.Endpoints;
 
 public class MonkeyGroup : Group
 {
     public MonkeyGroup()
     {
-        Configure("api/monkeys", ep =>
+        Configure("/api/monkeys", ep =>
         {
             ep.Description(x => x
-                .WithTags("Monkeys")
-                .Produces<ErrorResponse>(400)
-                .Produces(401)
-                .Produces(500));
+                .ProducesProblemDetails(500)
+                .AutoTagOverride("Monkeys")
+                .WithGroupName("Monkeys"));
+            ep.AllowAnonymous();
         });
     }
 }
 ```
 
-Now update your endpoints to use the group. Update `GetMonkeysEndpoint.cs`:
+Key features here:
+
+- **Base route** - All grouped endpoints inherit `/api/monkeys` as their prefix
+- **Swagger tags** - Automatically categorizes endpoints under "Monkeys" in API docs
+- **Common responses** - Every endpoint in this group produces `500` errors (these would be returned from a global exception handler)
+- **Shared security** - All endpoints allow anonymous access (you could require auth instead)
+
+Now update your endpoints to use the group. Here's `GetMonkeysEndpoint.cs`:
 
 ```csharp
 public class GetMonkeysEndpoint(MonkeyRepository repository) 
@@ -614,35 +568,40 @@ public class GetMonkeysEndpoint(MonkeyRepository repository)
 {
     public override void Configure()
     {
-        Get("");  // Route is now relative to the group
+        Get("");  // Empty string = just the group's base route
         Group<MonkeyGroup>();
-        AllowAnonymous();
-        Description(x => x
-            .WithSummary("Get all monkeys")
-            .WithDescription("Retrieves a list of all monkeys in the sanctuary"));
     }
 
     // ... rest of the code
 }
 ```
 
-Update `CreateMonkeyEndpoint.cs`:
+And `CreateMonkeyEndpoint.cs`:
 
 ```csharp
-public class CreateMonkeyEndpoint(MonkeyRepository repository) 
-    : Endpoint<CreateMonkeyRequest, CreateMonkeyResponse>
+public class AddMonkeyEndpoint(MonkeyRepository repository) 
+    : Endpoint<CreateMonkeyRequest>
 {
     public override void Configure()
     {
-        Post("");  // Relative to group
+        Post("");  // Also inherits /api/monkeys
         Group<MonkeyGroup>();
-        AllowAnonymous();
-        Description(x => x
-            .WithSummary("Create a new monkey")
-            .WithDescription("Adds a new monkey to the sanctuary")
-            .Accepts<CreateMonkeyRequest>("application/json")
-            .Produces<CreateMonkeyResponse>(201)
-            .ProducesProblemDetails(400));
+    }
+
+    // ... rest of the code
+}
+```
+
+The delete endpoint can add its own sub-route:
+
+```csharp
+public class DeleteMonkeyEndpoint(MonkeyRepository repository) 
+    : Endpoint<DeleteMonkeyRequest>
+{
+    public override void Configure()
+    {
+        Delete("/{Id}");  // Becomes /api/monkeys/{Id}
+        Group<MonkeyGroup>();
     }
 
     // ... rest of the code
@@ -651,91 +610,128 @@ public class CreateMonkeyEndpoint(MonkeyRepository repository)
 
 The benefits of grouping:
 
-✅ Consistent base routes  
-✅ Shared metadata and documentation  
-✅ Common error responses  
-✅ Better Swagger organization  
-✅ Version management support  
+✅ **Consistent base routes** - No route duplication across endpoints  
+✅ **Shared metadata** - Common documentation and response codes  
+✅ **Centralized security** - Apply auth policies in one place  
+✅ **Better Swagger organization** - Grouped by tag in API explorer  
+✅ **Version management** - Easy to create v1, v2 groups  
 
 ## Adding OpenAPI Documentation
 
-FastEndpoints has excellent OpenAPI/Swagger support built-in. Let's enhance our documentation.
+FastEndpoints has excellent OpenAPI/Swagger support built-in, but we can take it to the next level with **Summary classes**. These provide rich, strongly-typed documentation for each endpoint.
 
-Update `Program.cs`:
+### Enhanced Documentation with Summary Classes
+
+Create `Features/Monkeys/Endpoints/CreateMonkeyEndpoint.cs` with a summary:
 
 ```csharp
-using FastEndpoints;
-using FastEndpoints.Swagger;
+using FastWebApi.Common.Persistence;
+using FastWebApi.Features.Monkeys.Commands;
+using FastWebApi.Features.Monkeys.Events;
+using FluentValidation;
 
-var builder = WebApplication.CreateBuilder();
+namespace FastWebApi.Features.Monkeys.Endpoints;
 
-builder.Services
-    .AddSingleton<MonkeyRepository>()
-    .AddFastEndpoints()
-    .SwaggerDocument(o =>
+public record CreateMonkeyRequest(string Name, int Age, string Temperament);
+
+public class AddMonkeyEndpoint(MonkeyRepository repository) : Endpoint<CreateMonkeyRequest>
+{
+    public override void Configure()
     {
-        o.DocumentSettings = s =>
+        Post("");
+        Group<MonkeyGroup>();
+        DontThrowIfValidationFails();
+    }
+
+    public override async Task HandleAsync(CreateMonkeyRequest req, CancellationToken ct)
+    {
+        // Custom business logic
+        var monkeyCount = repository.GetAll().Count;
+        if (monkeyCount >= 5)
         {
-            s.DocumentName = "v1";
-            s.Title = "Monkey Sanctuary API";
-            s.Version = "v1";
-            s.Description = "A comprehensive API for managing our monkey sanctuary";
-        };
-    });
+            AddError("Monkey limit reached. Cannot add more monkeys.");
+            await SendErrorsAsync(cancellation: ct);
+            return;
+        }
 
-var app = builder.Build();
+        var temperament = Enum.Parse<Common.Domain.Monkeys.Temperament>(req.Temperament, true);
+        var monkey = Common.Domain.Monkeys.Monkey.Create(req.Name, req.Age, temperament);
+        repository.Create(monkey);
 
-app.UseFastEndpoints(c =>
+        // Publish event and execute command (we'll cover these later!)
+        await new MonkeyCreatedEvent(req.Name, req.Age).PublishAsync(Mode.WaitForAll, ct);
+        await new EmailZooCommand(req.Name, req.Age).ExecuteAsync(ct);
+    }
+}
+
+public class CreateMonkeyValidator : Validator<CreateMonkeyRequest>
 {
-    c.Endpoints.RoutePrefix = "api";
-})
-.UseSwaggerGen(c =>
+    public CreateMonkeyValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty();
+        RuleFor(x => x.Age).GreaterThan(0);
+        RuleFor(x => x.Temperament)
+            .Must(temperament => Enum.TryParse<Common.Domain.Monkeys.Temperament>(
+                temperament, true, out _))
+            .WithMessage("Temperament must be a valid value.");
+    }
+}
+
+// The magic happens here! 🪄
+public class CreateMonkeySummary : Summary<AddMonkeyEndpoint>
 {
-    c.Path = "/swagger/{documentName}/swagger.json";
-});
-
-app.Run();
-```
-
-Now let's add XML documentation for even better API docs. Update `FastWebApi.csproj`:
-
-```xml
-<PropertyGroup>
-  <TargetFramework>net8.0</TargetFramework>
-  <Nullable>enable</Nullable>
-  <ImplicitUsings>enable</ImplicitUsings>
-  <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  <NoWarn>$(NoWarn);1591</NoWarn>
-</PropertyGroup>
-```
-
-Add XML comments to your endpoints:
-
-```csharp
-/// <summary>
-/// Retrieves all monkeys from the sanctuary
-/// </summary>
-/// <returns>A list of all monkeys</returns>
-public class GetMonkeysEndpoint(MonkeyRepository repository) 
-    : EndpointWithoutRequest<GetMonkeysResponse>
-{
-    // ... implementation
+    public CreateMonkeySummary()
+    {
+        Summary = "Create a new monkey";
+        Description = "Adds a new monkey to the collection. The system has a maximum limit of 5 monkeys.";
+        
+        Response(204, "Monkey created successfully");
+        Response(400, "Invalid request data or monkey limit reached");
+        Response(500, "Internal server error");
+        
+        ExampleRequest = new CreateMonkeyRequest(
+            Name: "Bubbles",
+            Age: 4,
+            Temperament: "Playful"
+        );
+    }
 }
 ```
 
-Visit `/swagger` to see your beautifully documented API! 📚
+The `Summary<T>` class provides:
+
+✅ **Human-readable descriptions** - Clear summary and detailed description  
+✅ **Response documentation** - All possible status codes and their meanings  
+✅ **Example requests** - Pre-filled examples in Swagger UI  
+✅ **Strongly-typed** - Refactoring-safe documentation  
+
+### Why Summary Classes Are Better Than XML Comments
+
+If you've used XML comments (`/// <summary>`), you know they get messy fast. Summary classes are:
+
+- **Strongly typed** - Compiler catches errors
+- **More expressive** - Document all response codes and scenarios
+- **Testable** - You can validate your API docs!
+- **Separated** - Documentation doesn't clutter your endpoint logic
+
+Visit `/swagger` now and click on the POST endpoint. You'll see:
+- The rich description
+- Example request pre-populated
+- All response codes documented
+- Clean, professional API docs 📚
+
+This is the kind of documentation your API consumers will love! No more guessing what temperament values are valid or what happens when you hit the monkey limit.
 
 ## Adding Global Preprocessors
 
-Preprocessors run before endpoint execution and are perfect for cross-cutting concerns like logging, authentication checks, or request enrichment.
+Preprocessors run before endpoint execution and are perfect for cross-cutting concerns like logging, authentication checks, or request enrichment. They're essentially middleware but scoped to FastEndpoints.
 
-Create `Common/Middleware/LoggingPreProcessor.cs`:
+Create `Common/Preprocessors/LoggingPreProcessor.cs`:
 
 ```csharp
-using FastEndpoints;
-using System.Diagnostics;
+using System.Text.Json;
 
-namespace FastWebApi.Common.Middleware;
+namespace FastWebApi.Common.Preprocessors;
 
 public class LoggingPreProcessor<TRequest> : IGlobalPreProcessor
 {
@@ -746,398 +742,433 @@ public class LoggingPreProcessor<TRequest> : IGlobalPreProcessor
         _logger = logger;
     }
 
-    public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
+    public Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
-        var sw = Stopwatch.StartNew();
+        var endpointName = context.HttpContext.GetEndpoint()?.DisplayName ?? "Unknown";
+        var request = context.Request;
         
+        var requestJson = request is not null 
+            ? JsonSerializer.Serialize(request, new JsonSerializerOptions { WriteIndented = false })
+            : "No request body";
+
         _logger.LogInformation(
-            "Starting request: {Method} {Path}",
-            context.HttpContext.Request.Method,
-            context.HttpContext.Request.Path);
+            "Calling endpoint: {Endpoint} with request: {Request}",
+            endpointName,
+            requestJson);
 
-        context.HttpContext.Items["RequestStopwatch"] = sw;
-        
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 }
 ```
 
-Create a post-processor `Common/Middleware/LoggingPostProcessor.cs`:
+This preprocessor logs every request with:
+- The endpoint being called
+- The full request body serialized as JSON
+- Synchronous execution (no async overhead for simple logging)
+
+Register it globally in `Program.cs`:
 
 ```csharp
-using FastEndpoints;
-using System.Diagnostics;
+using FastEndpoints.Swagger;
+using FastWebApi.Common.Persistence;
+using FastWebApi.Common.Preprocessors;
 
-namespace FastWebApi.Common.Middleware;
-
-public class LoggingPostProcessor<TRequest, TResponse> : IGlobalPostProcessor
-{
-    private readonly ILogger<LoggingPostProcessor<TRequest, TResponse>> _logger;
-
-    public LoggingPostProcessor(ILogger<LoggingPostProcessor<TRequest, TResponse>> logger)
-    {
-        _logger = logger;
-    }
-
-    public async Task PostProcessAsync(IPostProcessorContext context, CancellationToken ct)
-    {
-        if (context.HttpContext.Items["RequestStopwatch"] is Stopwatch sw)
-        {
-            sw.Stop();
-            _logger.LogInformation(
-                "Completed request: {Method} {Path} - {StatusCode} in {ElapsedMs}ms",
-                context.HttpContext.Request.Method,
-                context.HttpContext.Request.Path,
-                context.HttpContext.Response.StatusCode,
-                sw.ElapsedMilliseconds);
-        }
-
-        await Task.CompletedTask;
-    }
-}
-```
-
-Register in `Program.cs`:
-
-```csharp
-builder.Services
+var bld = WebApplication.CreateBuilder();
+bld.Services
     .AddSingleton<MonkeyRepository>()
-    .AddFastEndpoints(o =>
-    {
-        o.Assemblies = new[] { typeof(Program).Assembly };
-    })
-    .SwaggerDocument(/* ... */);
+    .AddFastEndpoints()
+    .SwaggerDocument();
 
-// After app.UseFastEndpoints()
+var app = bld.Build();
 app.UseFastEndpoints(c =>
 {
-    c.Endpoints.RoutePrefix = "api";
     c.Endpoints.Configurator = ep =>
     {
-        ep.PreProcessors(Order.Before, new LoggingPreProcessor<object>());
-        ep.PostProcessors(Order.After, new LoggingPostProcessor<object, object>());
+        ep.PreProcessor<LoggingPreProcessor<object>>(Order.Before);
     };
-});
+})
+.UseSwaggerGen();
+
+app.Run();
 ```
 
-Now every request is logged with timing information! ⏱️
+Now every request logs its details! Here's what you'll see:
+
+```
+info: FastWebApi.Common.Preprocessors.LoggingPreProcessor[0]
+      Calling endpoint: HTTP: POST /api/monkeys => AddMonkeyEndpoint 
+      with request: {"Name":"Bubbles","Age":4,"Temperament":"Playful"}
+```
+
+### When to Use Preprocessors vs Middleware
+
+You might be thinking: "Isn't this just middleware?" Good question! 🤔
+
+**Use preprocessors when:**
+- Logic is specific to FastEndpoints
+- You need access to the parsed request object
+- You want endpoint-level control (can skip per endpoint)
+- Performance matters (preprocessors are faster than full middleware)
+
+**Use middleware when:**
+- Logic applies to the entire app (static files, health checks, etc.)
+- You need to short-circuit the entire pipeline
+- Working with raw HTTP context before routing
+
+For FastEndpoints-specific logging like this, preprocessors are perfect! They're faster, more focused, and integrate seamlessly with your endpoints. ⚡
 
 ## Commands with Handlers and Middleware
 
-Commands represent intentions to change state. Let's implement a proper command pattern for creating monkeys.
+FastEndpoints has built-in support for the **Command pattern** via `ICommand` and `ICommandHandler`. This is perfect for encapsulating business logic that doesn't necessarily map to HTTP requests—like sending emails, updating caches, or triggering workflows.
 
-Create `Features/Monkeys/Commands/CreateMonkey.cs`:
+Think of commands as "do something" operations that can be called from anywhere in your application, not just from endpoints. Let's see this in action! 🎬
+
+### Creating a Command
+
+Create `Features/Monkeys/Commands/EmailZooCommand.cs`:
 
 ```csharp
 namespace FastWebApi.Features.Monkeys.Commands;
 
-using Common.Domain.Monkeys;
+public record EmailZooCommand(string MonkeyName, int MonkeyAge) : ICommand;
 
-public record CreateMonkeyCommand(string Name, int Age, Temperament Temperament);
-
-public record CreateMonkeyResult(Guid Id, string Name, int Age, string Temperament);
-```
-
-Create the command handler `Features/Monkeys/Commands/CreateMonkeyHandler.cs`:
-
-```csharp
-using FastWebApi.Common.Persistence;
-using FastWebApi.Common.Domain.Monkeys;
-
-namespace FastWebApi.Features.Monkeys.Commands;
-
-public class CreateMonkeyHandler
+public class EmailZooCommandHandler : ICommandHandler<EmailZooCommand>
 {
-    private readonly MonkeyRepository _repository;
-    private readonly ILogger<CreateMonkeyHandler> _logger;
+    private readonly ILogger<EmailZooCommandHandler> _logger;
 
-    public CreateMonkeyHandler(
-        MonkeyRepository repository,
-        ILogger<CreateMonkeyHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<CreateMonkeyResult> HandleAsync(
-        CreateMonkeyCommand command, 
-        CancellationToken ct)
-    {
-        _logger.LogInformation("Creating monkey: {Name}", command.Name);
-
-        var monkey = Monkey.Create(command.Name, command.Age, command.Temperament);
-        _repository.Create(monkey);
-
-        _logger.LogInformation("Monkey created successfully: {Id}", monkey.Id);
-
-        return new CreateMonkeyResult(
-            monkey.Id,
-            monkey.Name,
-            monkey.Age,
-            monkey.Temperament.ToString());
-    }
-}
-```
-
-Now let's add command middleware for cross-cutting concerns. Create `Common/Commands/CommandLoggingMiddleware.cs`:
-
-```csharp
-namespace FastWebApi.Common.Commands;
-
-public class CommandLoggingMiddleware<TCommand, TResult>
-{
-    private readonly ILogger<CommandLoggingMiddleware<TCommand, TResult>> _logger;
-
-    public CommandLoggingMiddleware(ILogger<CommandLoggingMiddleware<TCommand, TResult>> logger)
+    public EmailZooCommandHandler(ILogger<EmailZooCommandHandler> logger)
     {
         _logger = logger;
     }
 
-    public async Task<TResult> ExecuteAsync(
-        TCommand command,
-        Func<TCommand, CancellationToken, Task<TResult>> next,
-        CancellationToken ct)
+    public Task ExecuteAsync(EmailZooCommand command, CancellationToken ct)
     {
+        var to = "admin@example.com";
+        var subject = "New Monkey Added";
+        var body = $"A new monkey named {command.MonkeyName} (age {command.MonkeyAge}) has been added to the collection.";
+
         _logger.LogInformation(
-            "Executing command: {CommandType}", 
-            typeof(TCommand).Name);
+            "Email sent to zoo - To: {To}, Subject: {Subject}, Body: {Body}",
+            to,
+            subject,
+            body);
 
-        try
-        {
-            var result = await next(command, ct);
-            
-            _logger.LogInformation(
-                "Command executed successfully: {CommandType}",
-                typeof(TCommand).Name);
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Command execution failed: {CommandType}",
-                typeof(TCommand).Name);
-            throw;
-        }
+        return Task.CompletedTask;
     }
 }
 ```
 
-Update the endpoint to use the handler:
+Key points:
+
+- `EmailZooCommand` implements `ICommand` (no result)
+- If you need a result, use `ICommand<TResult>`
+- Handler implements `ICommandHandler<TCommand>`
+- Handlers are automatically discovered and registered by FastEndpoints
+
+### Executing Commands from Endpoints
+
+Update your `CreateMonkeyEndpoint` to execute the command:
 
 ```csharp
-using FastEndpoints;
-using FastWebApi.Features.Monkeys.Commands;
-
-namespace FastWebApi.Features.Monkeys;
-
-public class CreateMonkeyEndpoint : Endpoint<CreateMonkeyCommand, CreateMonkeyResult>
+public class AddMonkeyEndpoint(MonkeyRepository repository) : Endpoint<CreateMonkeyRequest>
 {
-    private readonly CreateMonkeyHandler _handler;
-
-    public CreateMonkeyEndpoint(CreateMonkeyHandler handler)
-    {
-        _handler = handler;
-    }
-
     public override void Configure()
     {
         Post("");
         Group<MonkeyGroup>();
-        AllowAnonymous();
+        DontThrowIfValidationFails();
     }
 
-    public override async Task HandleAsync(CreateMonkeyCommand req, CancellationToken ct)
+    public override async Task HandleAsync(CreateMonkeyRequest req, CancellationToken ct)
     {
-        var result = await _handler.HandleAsync(req, ct);
-        await SendCreatedAtAsync<GetMonkeyByIdEndpoint>(
-            new { id = result.Id },
-            result,
-            cancellation: ct);
+        var monkeyCount = repository.GetAll().Count;
+        if (monkeyCount >= 5)
+        {
+            AddError("Monkey limit reached. Cannot add more monkeys.");
+            await SendErrorsAsync(cancellation: ct);
+            return;
+        }
+
+        var temperament = Enum.Parse<Common.Domain.Monkeys.Temperament>(req.Temperament, true);
+        var monkey = Common.Domain.Monkeys.Monkey.Create(req.Name, req.Age, temperament);
+        repository.Create(monkey);
+
+        // Execute the command! 📧
+        await new EmailZooCommand(req.Name, req.Age).ExecuteAsync(ct);
     }
 }
 ```
 
-Register the handler in `Program.cs`:
+Just call `.ExecuteAsync()` on your command instance. FastEndpoints handles the rest—finding the handler, executing it, and managing the lifecycle.
+
+### Adding Command Middleware
+
+Want to add cross-cutting concerns like logging, caching, or transaction management? Command middleware has you covered! 🛡️
+
+Create `Common/Middleware/CommandLoggingMiddleware.cs`:
 
 ```csharp
-builder.Services
-    .AddSingleton<MonkeyRepository>()
-    .AddScoped<CreateMonkeyHandler>()  // Register handler
-    .AddFastEndpoints()
-    .SwaggerDocument(/* ... */);
+namespace FastWebApi.Common.Middleware;
+
+sealed class CommandLogger<TCommand, TResult>(ILogger<TCommand> logger)
+    : ICommandMiddleware<TCommand, TResult> where TCommand : ICommand<TResult>
+{
+    public async Task<TResult> ExecuteAsync(
+        TCommand command, 
+        CommandDelegate<TResult> next, 
+        CancellationToken ct)
+    {
+        logger.LogInformation("Executing command: {name}", command.GetType().Name);
+
+        var result = await next();
+
+        logger.LogInformation("Got result: {value}", result);
+
+        return result;
+    }
+}
 ```
+
+Register the middleware in `Program.cs`:
+
+```csharp
+using FastEndpoints.Swagger;
+using FastWebApi.Common.Persistence;
+using FastWebApi.Common.Preprocessors;
+using FastWebApi.Common.Middleware;
+
+var bld = WebApplication.CreateBuilder();
+bld.Services
+    .AddSingleton<MonkeyRepository>()
+    .AddFastEndpoints()
+    .SwaggerDocument()
+    .AddCommandMiddleware(c => c.Register(typeof(CommandLogger<,>)));
+
+var app = bld.Build();
+app.UseFastEndpoints(c =>
+{
+    c.Endpoints.Configurator = ep =>
+    {
+        ep.PreProcessor<LoggingPreProcessor<object>>(Order.Before);
+    };
+})
+.UseSwaggerGen();
+
+app.Run();
+```
+
+Now every command execution logs its start and result! Here's what you'll see:
+
+```
+info: FastWebApi.Features.Monkeys.Commands.EmailZooCommand[0]
+      Executing command: EmailZooCommand
+info: FastWebApi.Features.Monkeys.Commands.EmailZooCommandHandler[0]
+      Email sent to zoo - To: admin@example.com, Subject: New Monkey Added, Body: A new monkey named Bubbles (age 4) has been added to the collection.
+info: FastWebApi.Features.Monkeys.Commands.EmailZooCommand[0]
+      Got result: {result object}
+```
+
+### Commands vs Traditional Handlers
+
+You might be wondering how this differs from custom service classes. Commands offer:
+
+✅ **Convention-based** - No manual registration, FastEndpoints finds them  
+✅ **Middleware pipeline** - Built-in support for cross-cutting concerns  
+✅ **Testability** - Each command is isolated and easy to unit test  
+✅ **Discoverability** - `ICommand` interface makes intent crystal clear  
+✅ **Consistent** - Same pattern across your entire codebase
+
+Think of commands as "mini-endpoints" for your business logic. They're perfect for operations like sending emails, generating reports, or any reusable logic that multiple endpoints might need. 🚀
 
 ## Events with Handlers
 
-Events represent things that have happened. Let's implement a domain event system for monkey creation.
+Events are the flip side of commands: **commands** say "do this thing," while **events** say "this thing happened." Events are perfect for decoupling your application—multiple handlers can react to the same event without the publisher knowing or caring. 🎯
 
-Create `Common/Events/IDomainEvent.cs`:
+FastEndpoints has built-in event support via `IEvent` and `IEventHandler`. Let's see it in action!
 
-```csharp
-namespace FastWebApi.Common.Events;
-
-public interface IDomainEvent
-{
-    DateTimeOffset OccurredAt { get; }
-}
-```
+### Creating an Event
 
 Create `Features/Monkeys/Events/MonkeyCreatedEvent.cs`:
 
 ```csharp
-using FastWebApi.Common.Events;
+using FastWebApi.Common.Persistence;
 
 namespace FastWebApi.Features.Monkeys.Events;
 
-public record MonkeyCreatedEvent(
-    Guid MonkeyId,
-    string Name,
-    int Age,
-    string Temperament) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-```
+public record MonkeyCreatedEvent(string MonkeyName, int MonkeyAge) : IEvent;
 
-Create an event handler `Features/Monkeys/Events/MonkeyCreatedEventHandler.cs`:
-
-```csharp
-using FastWebApi.Common.Events;
-
-namespace FastWebApi.Features.Monkeys.Events;
-
-public class MonkeyCreatedEventHandler
+public class MonkeyCreatedEventHandler : IEventHandler<MonkeyCreatedEvent>
 {
     private readonly ILogger<MonkeyCreatedEventHandler> _logger;
+    private readonly MonkeyRepository _repository;
 
-    public MonkeyCreatedEventHandler(ILogger<MonkeyCreatedEventHandler> logger)
+    public MonkeyCreatedEventHandler(
+        ILogger<MonkeyCreatedEventHandler> logger, 
+        MonkeyRepository repository)
+    {
+        _logger = logger;
+        _repository = repository;
+    }
+
+    public Task HandleAsync(MonkeyCreatedEvent eventModel, CancellationToken ct)
+    {
+        var remainingCapacity = 5 - _repository.GetAll().Count;
+
+        _logger.LogInformation(
+            "Monkey '{MonkeyName}' (age {MonkeyAge}) has been created. Zoo capacity has decreased to {RemainingCapacity} available spots.",
+            eventModel.MonkeyName,
+            eventModel.MonkeyAge,
+            remainingCapacity);
+
+        return Task.CompletedTask;
+    }
+}
+```
+
+Key points:
+
+- `MonkeyCreatedEvent` implements `IEvent`
+- Handler implements `IEventHandler<TEvent>`
+- Multiple handlers can subscribe to the same event
+- Handlers are automatically discovered and registered
+
+### Publishing Events from Endpoints
+
+Update your `CreateMonkeyEndpoint` to publish the event:
+
+```csharp
+public class AddMonkeyEndpoint(MonkeyRepository repository) : Endpoint<CreateMonkeyRequest>
+{
+    public override void Configure()
+    {
+        Post("");
+        Group<MonkeyGroup>();
+        DontThrowIfValidationFails();
+    }
+
+    public override async Task HandleAsync(CreateMonkeyRequest req, CancellationToken ct)
+    {
+        var monkeyCount = repository.GetAll().Count;
+        if (monkeyCount >= 5)
+        {
+            AddError("Monkey limit reached. Cannot add more monkeys.");
+            await SendErrorsAsync(cancellation: ct);
+            return;
+        }
+
+        var temperament = Enum.Parse<Common.Domain.Monkeys.Temperament>(req.Temperament, true);
+        var monkey = Common.Domain.Monkeys.Monkey.Create(req.Name, req.Age, temperament);
+        repository.Create(monkey);
+
+        // Publish the event! 📢
+        await new MonkeyCreatedEvent(req.Name, req.Age).PublishAsync(Mode.WaitForAll, ct);
+
+        // Execute command (emails are sent after event handling)
+        await new EmailZooCommand(req.Name, req.Age).ExecuteAsync(ct);
+    }
+}
+```
+
+The `.PublishAsync()` method takes a `Mode` parameter:
+
+- **`Mode.WaitForAll`** - Wait for all handlers to complete (most common)
+- **`Mode.WaitForAny`** - Wait for first handler to complete
+- **`Mode.WaitForNone`** - Fire and forget (be careful with this!)
+
+### Event Publishing Modes Explained
+
+Let's break down when to use each mode:
+
+**WaitForAll** (recommended for most cases):
+```csharp
+await new MonkeyCreatedEvent(name, age).PublishAsync(Mode.WaitForAll, ct);
+```
+- Ensures all handlers complete before continuing
+- Exceptions from handlers bubble up to the caller
+- Use when handlers are critical (logging, audit trails)
+
+**WaitForAny** (rare, use with caution):
+```csharp
+await new MonkeyCreatedEvent(name, age).PublishAsync(Mode.WaitForAny, ct);
+```
+- Returns after the first handler completes
+- Other handlers continue in background
+- Use for scenarios where you only need one handler to succeed
+
+**WaitForNone** (fire and forget):
+```csharp
+await new MonkeyCreatedEvent(name, age).PublishAsync(Mode.WaitForNone, ct);
+```
+- Returns immediately, handlers run in background
+- No exception handling from handlers
+- Use for non-critical notifications where failure is acceptable
+
+### Multiple Event Handlers
+
+You can have multiple handlers for the same event. Let's add another one!
+
+Create `Features/Monkeys/Events/MonkeyCreatedNotificationHandler.cs`:
+
+```csharp
+namespace FastWebApi.Features.Monkeys.Events;
+
+public class MonkeyCreatedNotificationHandler : IEventHandler<MonkeyCreatedEvent>
+{
+    private readonly ILogger<MonkeyCreatedNotificationHandler> _logger;
+
+    public MonkeyCreatedNotificationHandler(ILogger<MonkeyCreatedNotificationHandler> logger)
     {
         _logger = logger;
     }
 
-    public async Task HandleAsync(MonkeyCreatedEvent @event, CancellationToken ct)
+    public Task HandleAsync(MonkeyCreatedEvent eventModel, CancellationToken ct)
     {
         _logger.LogInformation(
-            "🐵 New monkey joined the sanctuary! Name: {Name}, Age: {Age}, Temperament: {Temperament}",
-            @event.Name,
-            @event.Age,
-            @event.Temperament);
+            "📱 Sending push notification: New monkey '{MonkeyName}' added!",
+            eventModel.MonkeyName);
 
-        // Here you could:
-        // - Send notifications
-        // - Update read models
-        // - Trigger workflows
-        // - Publish to message bus
-
-        await Task.CompletedTask;
+        // In real app, you'd call a notification service here
+        return Task.CompletedTask;
     }
 }
 ```
 
-Create a simple event publisher `Common/Events/EventPublisher.cs`:
+Both handlers execute automatically when the event is published! No registration needed—FastEndpoints discovers them. ✨
+
+### Events vs Commands: When to Use Which?
+
+**Use Commands when:**
+- You're performing an action or operation
+- You expect a result
+- You need error handling and retries
+- Example: `EmailZooCommand`, `GenerateReportCommand`
+
+**Use Events when:**
+- Something has already happened
+- Multiple systems need to react
+- Loose coupling is important
+- Example: `MonkeyCreatedEvent`, `MonkeyDeletedEvent`
+
+Here's the pattern in action:
 
 ```csharp
-namespace FastWebApi.Common.Events;
+// 1. Perform the action (might use a command internally)
+var monkey = Monkey.Create(req.Name, req.Age, temperament);
+repository.Create(monkey);
 
-public class EventPublisher
-{
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<EventPublisher> _logger;
+// 2. Announce what happened (event)
+await new MonkeyCreatedEvent(req.Name, req.Age).PublishAsync(Mode.WaitForAll, ct);
 
-    public EventPublisher(IServiceProvider serviceProvider, ILogger<EventPublisher> logger)
-    {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
-    }
-
-    public async Task PublishAsync<TEvent>(TEvent @event, CancellationToken ct) 
-        where TEvent : IDomainEvent
-    {
-        _logger.LogInformation("Publishing event: {EventType}", typeof(TEvent).Name);
-
-        // In a real application, you might use MediatR, MassTransit, or similar
-        // For this demo, we'll just log
-        var handlers = _serviceProvider.GetServices<IEventHandler<TEvent>>();
-        
-        foreach (var handler in handlers)
-        {
-            await handler.HandleAsync(@event, ct);
-        }
-    }
-}
-
-public interface IEventHandler<in TEvent> where TEvent : IDomainEvent
-{
-    Task HandleAsync(TEvent @event, CancellationToken ct);
-}
+// 3. Trigger follow-up actions (command)
+await new EmailZooCommand(req.Name, req.Age).ExecuteAsync(ct);
 ```
 
-Update the command handler to publish events:
+This gives you a clean separation:
+- **Events** for notifications ("this happened")
+- **Commands** for actions ("do this")
+- **Endpoints** orchestrate the flow
 
-```csharp
-using FastWebApi.Common.Events;
-using FastWebApi.Features.Monkeys.Events;
-
-public class CreateMonkeyHandler
-{
-    private readonly MonkeyRepository _repository;
-    private readonly EventPublisher _eventPublisher;
-    private readonly ILogger<CreateMonkeyHandler> _logger;
-
-    public CreateMonkeyHandler(
-        MonkeyRepository repository,
-        EventPublisher eventPublisher,
-        ILogger<CreateMonkeyHandler> logger)
-    {
-        _repository = repository;
-        _eventPublisher = eventPublisher;
-        _logger = logger;
-    }
-
-    public async Task<CreateMonkeyResult> HandleAsync(
-        CreateMonkeyCommand command, 
-        CancellationToken ct)
-    {
-        _logger.LogInformation("Creating monkey: {Name}", command.Name);
-
-        var monkey = Monkey.Create(command.Name, command.Age, command.Temperament);
-        _repository.Create(monkey);
-
-        // Publish domain event
-        var @event = new MonkeyCreatedEvent(
-            monkey.Id,
-            monkey.Name,
-            monkey.Age,
-            monkey.Temperament.ToString());
-        
-        await _eventPublisher.PublishAsync(@event, ct);
-
-        _logger.LogInformation("Monkey created successfully: {Id}", monkey.Id);
-
-        return new CreateMonkeyResult(
-            monkey.Id,
-            monkey.Name,
-            monkey.Age,
-            monkey.Temperament.ToString());
-    }
-}
-```
-
-Register everything in `Program.cs`:
-
-```csharp
-builder.Services
-    .AddSingleton<MonkeyRepository>()
-    .AddScoped<CreateMonkeyHandler>()
-    .AddScoped<EventPublisher>()
-    .AddScoped<MonkeyCreatedEventHandler>()
-    .AddFastEndpoints()
-    .SwaggerDocument(/* ... */);
-```
-
-Now when you create a monkey, you'll see the event being published and handled in the logs! 🎉
+And the best part? No MediatR needed! FastEndpoints provides all this out of the box. 🎉
 
 ## Summary
 
@@ -1164,10 +1195,9 @@ Now go build something awesome! 🚀
 ## Resources
 
 - **FastEndpoints Documentation**: https://fast-endpoints.com/
-- **Source Code**: https://github.com/FastEndpoints/FastEndpoints
-- **Sample Project**: https://github.com/FastEndpoints/Examples
+- **Source Code**: https://github.com/danielmackay/dotnet-fast-endpoints
 - **FluentValidation**: https://docs.fluentvalidation.net/
 - **Vertical Slice Architecture**: https://www.jimmybogard.com/vertical-slice-architecture/
 - **REPR Pattern**: https://deviq.com/design-patterns/repr-design-pattern
 
-Have questions or want to share your FastEndpoints experience? Drop a comment below or find me on [Twitter/X](https://x.com/dandoescode)! I'd love to hear how you're using FastEndpoints in your projects. 😎
+Have questions or want to share your FastEndpoints experience? Drop a comment below or find me on [LinkedIn](https://www.linkedin.com/in/danieljamesmackay/)! I'd love to hear how you're using FastEndpoints in your projects. 😎
