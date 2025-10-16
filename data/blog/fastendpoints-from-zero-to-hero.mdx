@@ -480,6 +480,8 @@ Response:
 
 Beautiful! 🎨
 
+**Validation Without the Plumbing** - If you've used MediatR for validation, you know the pain: creating a custom pipeline behavior, scanning for validators at runtime, wiring up the correct one, executing it, mapping results into some intermediate response format, then translating that into proper HTTP status codes. It's a lot of ceremony for what should be straightforward. With FastEndpoints, all that plumbing vanishes. Validators are automatically discovered by convention, executed before your handler runs, and failures are immediately translated into `400 Bad Request` responses with properly formatted error details. No custom behaviors, no middleware, no manual mapping—it just works out of the box. ✨
+
 ## Adding a DELETE Endpoint with Model Binding
 
 Let's create a DELETE endpoint that demonstrates route parameter binding. Create `Features/Monkeys/DeleteMonkeyEndpoint.cs`:
