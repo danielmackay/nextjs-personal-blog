@@ -1,0 +1,151 @@
+---
+title: 'Efficient Vibe Coding: How Clarifying Questions Make AI Actually Useful'
+date: '2025-11-15'
+tags: ['ai', 'productivity', 'prompt-engineering', 'copilot', 'dotnet', 'vibe-coding']
+draft: true
+summary: 'Stop getting unpredictable results from your AI assistant. Learn how to evolve your prompting from vague "vibe coding" to a structured, Socratic dialogue that delivers the exact code you need, faster.'
+images: ['/static/images/efficient-vibe-coding-with-clarifying-questions/banner.png']
+layout: PostLayout
+---
+
+![Banner](/static/images/efficient-vibe-coding-with-clarifying-questions/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## Introduction
+
+We’ve all been there. You're in the zone, working with an AI code assistant like GitHub Copilot or Cursor, and you have a clear "vibe" for a feature. You fire off a quick prompt: "Create a MediatR handler to add a product."
+
+What you get back is… code. It looks plausible, but it’s riddled with assumptions. The AI guessed your `DbContext`, invented a validation strategy, and returned a DTO that doesn't exist. You've just entered the frustrating loop of "vibe coding": prompt, get a mediocre result, tweak, re-prompt, and repeat. It feels fast, but it's often just a waste of time. 🤮
+
+The problem is that the AI is a brilliant but clueless intern (one that LOVES to take guesses). It has near infinite knowledge but zero context about your project. In this post, we'll walk through the evolution of prompting, moving from vague commands to a highly efficient, structured dialogue that turns your AI into the senior-level pair programmer you always wanted.
+
+## The Evolution of Vibe Coding
+
+Getting good results from AI is a skill. Let's look at how we can level up our prompting game through three distinct stages. We'll use the example of creating a MediatR command handler in a .NET application.
+
+### Stage 1: The Vague Command (And the Messy Result)
+
+This is where most of us start. We treat the AI like a command-line interface for our thoughts.
+
+**The Prompt:**
+> Create a MediatR command handler to create a new product.
+
+The AI, forced to guess, might produce something like this:
+
+```csharp
+// AI-Generated Code (with lots of assumptions)
+public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, ProductDto>
+{
+    private readonly AppDbContext _context; // Assumption: Is this my DbContext?
+
+    public CreateProductCommandHandler(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<ProductDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
+    {
+        // Assumption: No validation? Should I use FluentValidation?
+        var product = new Product
+        {
+            Name = request.Name,
+            Price = request.Price // Assumption: What about SKU, description, etc.?
+        };
+
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Assumption: Does ProductDto even exist? What should it contain?
+        return new ProductDto { Id = product.Id, Name = product.Name };
+    }
+}
+```
+
+This code is a minefield of guesswork. It's not *wrong*, but it's not *right for our project*. We now have to spend more time correcting the AI's assumptions than it would have taken to write it ourselves.
+
+### Stage 2: The "Ask Me Questions" Info Dump
+
+Frustrated with the guesswork, we get smarter. We realize the AI needs more information, so we prompt it to ask for that information.
+
+**The Prompt:**
+> I want to create a MediatR command handler. Ask me some clarifying questions to make sure you have all the details about validation, the database, and the return type.
+
+The AI responds with a wall of text:
+
+> **AI:** Okay, to create the handler correctly, I need to know: What is the name of your DbContext? Are you using FluentValidation, and if so, what are the validation rules for the product name and price? What properties should be in the command? What should the handler return—the full entity, a DTO, or just the ID? What is the exact namespace for your commands and handlers?
+
+This is a huge improvement! ✅ We're now providing the necessary context. The problem is that it's inefficient. You have to read a paragraph of questions and write a paragraph of answers. It's a slow, unstructured conversation.
+
+### Stage 3: The Socratic Dialogue (Structured & Efficient)
+
+This is the breakthrough. Instead of letting the AI control the flow of questions, we dictate *how* it should ask them. This simple meta-prompt transforms the entire interaction.
+
+**The Golden Prompt:**
+> Ask me if you have any questions before you start. Ask each question one at a time. Wait for an answer before asking the next question. If there are several options, show these in a table with options labeled A, B, C, etc.
+
+Now, watch the magic happen.
+
+> **AI:** Okay, I will ask questions one by one.
+>
+> **Question 1 of 5:** How should the handler authenticate with the database?
+>
+> | Option | Description |
+> | :--- | :--- |
+> | A | Using a standard DbContext injected via DI. |
+> | B | Using a repository pattern (e.g., `IProductRepository`). |
+> | C | Using Dapper with a direct `IDbConnection`. |
+
+You can simply reply: **"A"**
+
+> **AI:** "Got it.
+>
+> **Question 2 of 5:** How should the incoming command be validated?
+>
+> | Option | Description |
+> | :--- | :--- |
+> | A | No validation needed in the handler. |
+> | B | Using a `FluentValidation` validator. |
+> | C | Manual `if/else` checks inside the handler. |
+
+You reply: **"B"**
+
+This small tweak makes a MASSIVE difference. The cognitive load is near zero. You are guided through the decisions in a structured way, and you can answer with a single letter. The AI gathers all the necessary, unambiguous information before writing a single line of code. The final result is code that is 99% of the way there, perfectly tailored to your project's architecture.
+
+### Real Example
+
+The [SSW.CleanArchitecture template](https://github.com/SSWConsulting/SSW.CleanArchitecture), contains an API based on the domain of superheroes. Let's add the ability to store home bases.
+
+<figure>
+  ![prompt](/static/images/efficient-vibe-coding-with-clarifying-questions/prompt.png)
+  <figcaption>Figure 1: Using the golden prompt to ask clarifying questions</figcaption>
+</figure>
+
+<figure>
+  ![question1](/static/images/efficient-vibe-coding-with-clarifying-questions/question1.png)
+  <figcaption>Figure 2: First clarifying question with structured options</figcaption>
+</figure>
+
+<figure>
+  ![question2](/static/images/efficient-vibe-coding-with-clarifying-questions/question2.png)
+  <figcaption>Figure 3: Second clarifying question with validation options</figcaption>
+</figure>
+
+## Bonus Pro-Tip: Reduce Questions with Persistent Context
+
+Another pro tip is to provide the AI with context it needs so that it needs to ask fewer clarifying questions.
+
+You can do this by creating a `copilot-instructions.md` or an `agents.md` with details about your project structure, technologies, coding standards, and testing strategy. If you're using VS Code, it can scan your project and create one for you. 😎
+
+Once you have this setup, each time the AI doesn't do something quite right, you can ask it to update the instructions for next time.
+
+## Summary
+
+Moving from vague "vibe coding" to a structured, Socratic dialogue is the key to unlocking the true potential of AI code assistants. By instructing your AI on *how* to ask questions, you eliminate guesswork and transform a frustrating experience into a highly efficient collaboration.
+
+The next time you start a task, don't just state what you want. Tell the AI to ask you questions one by one, and you'll be amazed at how much faster and more accurate your results become.
+
+## Resources
+
+- **GitHub Copilot:** [https://github.com/features/copilot](https://github.com/features/copilot)
+- **SSW Clean Architecture Template**: [https://github.com/SSWConsulting/SSW.CleanArchitecture](https://github.com/SSWConsulting/SSW.CleanArchitecture)
