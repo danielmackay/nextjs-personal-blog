@@ -62,6 +62,13 @@ yarn analyze      # Bundle analysis with ANALYZE=true
 
 ### Custom Components Patterns
 - **Image**: Use `@/components/Image` (Next.js optimized)
+- **Images with Captions**: All images (excluding banner images) must use HTML `<figure>` elements with `<figcaption>` for proper figure text:
+  ```jsx
+  <figure>
+    <img src="/static/images/[slug]/image.png" alt="Descriptive alt text" />
+    <figcaption>Figure: Descriptive caption text</figcaption>
+  </figure>
+  ```
 - **Links**: Use `@/components/Link` (internal/external detection)
 - **Code**: Syntax highlighting via rehype-prism-plus with line numbers
 - **Tables**: Auto-wrapped with `TableWrapper` for responsive design

@@ -30,7 +30,10 @@ If you are working with C# 14 and try to use the `field` keyword, you will likel
 Error [15:16] The name 'field' does not exist in the current context
 ```
 
-![OpenCode showing an error for the field keyword](/static/images/configuring-opencode-for-csharp-14/error.png)
+<figure>
+  <img src="/static/images/configuring-opencode-for-csharp-14/error.png" alt="OpenCode showing an error for the field keyword" />
+  <figcaption>Figure: OpenCode error when using the C# 14 field keyword</figcaption>
+</figure>
 
 When OpenCode encounters this error, it attempts to fix it. The agent will go on a "side quest" to diagnose the problem, suggesting various solutions such as:
 
@@ -62,7 +65,10 @@ dotnet tool install --global csharp-ls
 
 Once installed, we can now use OpenCode to work with C# 14 without errors—and without the lengthy, token-burning side quests.
 
-![OpenCode successfully processing C# 14 code](/static/images/configuring-opencode-for-csharp-14/solution.png)
+<figure>
+  <img src="/static/images/configuring-opencode-for-csharp-14/solution.png" alt="OpenCode successfully processing C# 14 code" />
+  <figcaption>Figure: OpenCode working correctly with the field keyword after installing csharp-ls</figcaption>
+</figure>
 
 ## Summary
 
@@ -72,3 +78,4 @@ Using the latest language features often requires ensuring your tooling is just 
 
 - [csharp-ls GitHub Repository](https://github.com/razzmatazz/csharp-language-server/tree/0.21.0)
 - [OpenCode LSP Documentation](https://opencode.ai/docs/lsp/)
+- [SSW Rules | Do you Use AI CLI Tools](https://www.ssw.com.au/rules/ai-cli-tools)
