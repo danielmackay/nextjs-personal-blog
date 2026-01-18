@@ -21,6 +21,7 @@ I knew there had to be a better way. I'd been experimenting with GitHub Copilot 
 ## Solution 1: The Full Manual Slog
 
 Let's set the scene. My initial process was what you might expect:
+
 1.  Open a browser.
 2.  Navigate to GitHub.com.
 3.  Find the right repository.
@@ -32,7 +33,7 @@ Every step was manual. It broke my focus and pulled me out of my development env
 
 ## Solution 2: My First Prompt and Its Pains
 
-My first step into automation was to create a generic prompt for Copilot Chat. The idea was to generate the *content* of the PBI, which I could then copy and paste into GitHub.
+My first step into automation was to create a generic prompt for Copilot Chat. The idea was to generate the _content_ of the PBI, which I could then copy and paste into GitHub.
 
 My prompt looked something like this:
 
@@ -46,7 +47,7 @@ The PBI should include the following:
 Title: Create a PBI title. The title must start with 🐛 Bug - if it's a bug, or ✨ (just the emoji, no extra words) if it's a feature or change.
 Description: Create a PBI description.
 Acceptance Criteria: unordered list of the Acceptance Criteria.
-Dev Notes: Any important implementation notes for the developer. 
+Dev Notes: Any important implementation notes for the developer.
 Reproduce Steps: If it's a bug, list the steps to reproduce it. If not, skip this section.
 
 The acceptance criteria should always include:
@@ -58,7 +59,7 @@ Tasks:
 
 While this was a step up from writing everything from scratch, it introduced its own set of problems. The biggest pain point was managing the prompt itself. I had to store it somewhere, find it, copy it, and then paste it into the chat. After generating the text, I still had to go through the whole manual GitHub issue creation dance. It was better, but still clunky and far from seamless.
 
-And of course, I still hand to create the PBI in GitHub manually, which meant I was still switching contexts and losing focus. 😩 
+And of course, I still hand to create the PBI in GitHub manually, which meant I was still switching contexts and losing focus. 😩
 
 Let's see how we can automate the PBI creation with the next solution.
 
@@ -68,27 +69,36 @@ This is where things started to get interesting. I discovered the [GitHub MCP (M
 
 ### Installing GitHub MCP Server
 
-The easiest way is to navigate to the new MCP Servers category in the extensions sidebar. Click on the globe which will take you to a currated list of MCP servers. 
+The easiest way is to navigate to the new MCP Servers category in the extensions sidebar. Click on the globe which will take you to a currated list of MCP servers.
 
 <figure>
-  <img src="/static/images/automating-pbi-creation-with-github-copilot/vscode-mcp-extensions.png" alt="VS Code MCP Extensions" style={{maxWidth:'500px', margin: 'auto'}} />
-  <figcaption style={{textAlign: 'center'}}>Figure: Installing the GitHub MCP Server in VS Code</figcaption>
+  <img
+    src="/static/images/automating-pbi-creation-with-github-copilot/vscode-mcp-extensions.png"
+    alt="VS Code MCP Extensions"
+    style={{ maxWidth: '500px', margin: 'auto' }}
+  />
+  <figcaption>Figure: Installing the GitHub MCP Server in VS Code</figcaption>
 </figure>
 
 Find the GitHub MCP Server and install it.
 
 <figure>
-  <img src="/static/images/automating-pbi-creation-with-github-copilot/github-mcp.png" alt="GitHub MCP Server"  />
-  <figcaption style={{textAlign: 'center'}}>Figure: GitHub MCP Server in VS Code</figcaption>
+  <img
+    src="/static/images/automating-pbi-creation-with-github-copilot/github-mcp.png"
+    alt="GitHub MCP Server"
+  />
+  <figcaption>Figure: GitHub MCP Server in VS Code</figcaption>
 </figure>
 
 Next, ensure the server is started. This should prompt you to authenticate with GitHub. Follow the instructions to log in and authorize the server.
 
 <figure>
-  <img src="/static/images/automating-pbi-creation-with-github-copilot/github-start-server.png" alt="GitHub MCP Server Authentication" />
-  <figcaption style={{textAlign: 'center'}}>Figure: Authenticating the GitHub MCP Server</figcaption>
+  <img
+    src="/static/images/automating-pbi-creation-with-github-copilot/github-start-server.png"
+    alt="GitHub MCP Server Authentication"
+  />
+  <figcaption>Figure: Authenticating the GitHub MCP Server</figcaption>
 </figure>
-
 
 ### The Prompt
 
@@ -127,14 +137,14 @@ The PBI should include the following:
 Title: Create a PBI title. The title must start with 🐛 Bug - if it's a bug, or ✨ (just the emoji, no extra words) if it's a feature or change.
 Description: Create a PBI description.
 Acceptance Criteria: unordered list of the Acceptance Criteria.
-Dev Notes: Any important implementation notes for the developer. 
+Dev Notes: Any important implementation notes for the developer.
 Reproduce Steps: If it's a bug, list the steps to reproduce it. If not, skip this section.
 
 The acceptance criteria should always include:
 - Meets [Definition of Done]({DEFINITION_OF_DONE_URL})
 
 Tasks:
-{TASKS} 
+{TASKS}
 
 The response should always be in markdown.
 
@@ -163,11 +173,15 @@ This was gives Copilot superpowers. My PBI generation was now context-aware and 
 
 ### Creating the Prompt file
 
-The easiest way to create the prompt file is to let VS Code guide you. Start by clicking 'Configure Chat' at the top of the Copilot Chat panel. 
+The easiest way to create the prompt file is to let VS Code guide you. Start by clicking 'Configure Chat' at the top of the Copilot Chat panel.
 
 <figure>
-  <img src="/static/images/automating-pbi-creation-with-github-copilot/prompt-files.png" alt="Creating a prompt file in VS Code" style={{maxWidth:'500px', margin: 'auto'}} />
-  <figcaption style={{textAlign: 'center'}}>Figure: Creating a prompt file in VS Code</figcaption>
+  <img
+    src="/static/images/automating-pbi-creation-with-github-copilot/prompt-files.png"
+    alt="Creating a prompt file in VS Code"
+    style={{ maxWidth: '500px', margin: 'auto' }}
+  />
+  <figcaption>Figure: Creating a prompt file in VS Code</figcaption>
 </figure>
 
 This will prompt you for a name for the new prompt file, and to choose a location for it (defaults to `.github/prompts`).
@@ -202,7 +216,7 @@ The PBI should include the following:
 Title: Create a PBI title. The title must start with 🐛 Bug - if it's a bug, or ✨ (just the emoji, no extra words) if it's a feature or change.
 Description: Create a PBI description.
 Acceptance Criteria: unordered list of the Acceptance Criteria.
-Dev Notes: Any important implementation notes for the developer. 
+Dev Notes: Any important implementation notes for the developer.
 Reproduce Steps: If it's a bug, list the steps to reproduce it. If not, skip this section.
 
 The acceptance criteria should always include:
@@ -232,18 +246,25 @@ Now that we have our prompt file set up, we can use it directly in Copilot Chat.
 There are several ways to use this. You can using the VS Code command palette and select `Chat: Run Prompt...`. You can drag the prompt file into the chat panel. I prefer to use slash commands like `/create-pbi` directly in the chat panel.
 
 <figure>
-  <img src="/static/images/automating-pbi-creation-with-github-copilot/create-pbi-prompt.png" alt="Using Copilot Chat with prompt files" style={{maxWidth:'500px', margin: 'auto'}} />
-  <figcaption style={{textAlign: 'center'}}>Figure: Using Copilot Chat with prompt files</figcaption>
+  <img
+    src="/static/images/automating-pbi-creation-with-github-copilot/create-pbi-prompt.png"
+    alt="Using Copilot Chat with prompt files"
+    style={{ maxWidth: '500px', margin: 'auto' }}
+  />
+  <figcaption>Figure: Using Copilot Chat with prompt files</figcaption>
 </figure>
 
-The following PBI was created: 
+The following PBI was created:
 
 <figure>
-  <img src="/static/images/automating-pbi-creation-with-github-copilot/issue.png" alt="PBI created in GitHub" />
-  <figcaption style={{textAlign: 'center'}}>Figure: [PBI created in GitHub](https://github.com/danielmackay/nextjs-personal-blog/issues/150)</figcaption>
+  <img
+    src="/static/images/automating-pbi-creation-with-github-copilot/issue.png"
+    alt="PBI created in GitHub"
+  />
+  <figcaption>
+    Figure: [PBI created in GitHub](https://github.com/danielmackay/nextjs-personal-blog/issues/150)
+  </figcaption>
 </figure>
-
-
 
 ## The "Aha!" Moment: Context + Conversation
 
@@ -251,9 +272,9 @@ The final tweak to my prompt was powerful, but the true "Aha!" moment came when 
 
 > Ask any questions you need to clarify the requirements before creating the PBI.
 
-This was just one part of the puzzle. The real magic happens because I'm running Copilot directly within my project in VS Code. This gives it a massive advantage: it has access to the *entire context* of my codebase. It can read my `copilot-instructions.md`, understand my application's architecture from the code itself, and see how different components interact.
+This was just one part of the puzzle. The real magic happens because I'm running Copilot directly within my project in VS Code. This gives it a massive advantage: it has access to the _entire context_ of my codebase. It can read my `copilot-instructions.md`, understand my application's architecture from the code itself, and see how different components interact.
 
-This combination is the ultimate PBI superpower! 🦸‍♂️. 
+This combination is the ultimate PBI superpower! 🦸‍♂️.
 
 Between Copilot now having access to relevant knowledge about the project, and being able to ask questions to fill in gaps in the original requirements, I've found Copilot generating surprisingly high quality PBIs every time. It's not just automation; it's a true, context-aware partnership. 🙌
 

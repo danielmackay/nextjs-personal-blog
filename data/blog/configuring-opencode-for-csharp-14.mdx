@@ -31,7 +31,10 @@ Error [15:16] The name 'field' does not exist in the current context
 ```
 
 <figure>
-  <img src="/static/images/configuring-opencode-for-csharp-14/error.png" alt="OpenCode showing an error for the field keyword" />
+  <img
+    src="/static/images/configuring-opencode-for-csharp-14/error.png"
+    alt="OpenCode showing an error for the field keyword"
+  />
   <figcaption>Figure: OpenCode error when using the C# 14 field keyword</figcaption>
 </figure>
 
@@ -65,9 +68,16 @@ dotnet tool install --global csharp-ls
 
 Once installed, we can now use OpenCode to work with C# 14 without errors—and without the lengthy, token-burning side quests.
 
+OpenCode will automatically detect the globally installed `csharp-ls` language server and use it instead of the built-in C# language server. No additional configuration is required—the tool takes precedence once it's available in your system PATH.
+
 <figure>
-  <img src="/static/images/configuring-opencode-for-csharp-14/solution.png" alt="OpenCode successfully processing C# 14 code" />
-  <figcaption>Figure: OpenCode working correctly with the field keyword after installing csharp-ls</figcaption>
+  <img
+    src="/static/images/configuring-opencode-for-csharp-14/solution.png"
+    alt="OpenCode successfully processing C# 14 code"
+  />
+  <figcaption>
+    Figure: OpenCode working correctly with the field keyword after installing csharp-ls
+  </figcaption>
 </figure>
 
 ## Summary
