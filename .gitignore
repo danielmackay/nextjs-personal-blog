@@ -30,6 +30,7 @@ public/sitemap.xml
 
 # misc
 .DS_Store
+*.tsbuildinfo
 
 # debug
 *.log
