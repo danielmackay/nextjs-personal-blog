@@ -18,6 +18,11 @@ Here's a scenario I bet you've hit. You're running Claude Code on a meaty refact
 
 The natural instinct is to do a fresh `git clone` of the repo into a second directory and work there. It technically works — two separate clones, two Claude sessions running in parallel. But it's painfully heavyweight. Modern codebases are large. A repo with full git history, assets, and dependencies can easily be several gigabytes. Cloning it again just to run a parallel task means waiting for the entire history to download, running `npm install` or `dotnet restore` again, and doubling your disk usage. For every additional parallel task, you pay that cost again. It doesn't scale.
 
+<figure>
+  <img src="/static/images/parallel-vibe-coding-with-git-worktrees/cloning.png" alt="Bad example, parallelizing work via multiple clones" />
+  <figcaption>Figure: ❌ Bad example, parallelizing work via multiple clones</figcaption>
+</figure>
+
 There's a better way: **git worktrees**.
 
 Worktrees are one of those git features that most developers have never needed — until they start running parallel AI sessions. Then suddenly they're essential. In this post I'll walk through what the problem actually is, how worktrees solve it, and how to wire them up with Claude Code for a smooth parallel workflow.
