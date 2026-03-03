@@ -1,19 +1,21 @@
 const projectsData = [
   {
-    title: 'A Search Engine',
-    description: `What if you could look up any information in the world? Webpages, images, videos
-    and more. Google has many features to help you find exactly what you're looking
-    for.`,
-    imgSrc: '/static/images/google.png',
-    href: 'https://www.google.com',
+    title: 'Tic Tac Toe',
+    description: `A classic Tic Tac Toe game built for the web. Play against an AI opponent in this fun implementation of the timeless strategy game.`,
+    imgSrc: '',
+    href: 'https://tic-tac-toe-phi-tawny.vercel.app/',
   },
   {
-    title: 'The Time Machine',
-    description: `Imagine being able to travel back in time or to the future. Simple turn the knob
-    to the desired date and press "Go". No more worrying about lost keys or
-    forgotten headphones with this simple yet affordable solution.`,
-    imgSrc: '/static/images/time-machine.jpg',
-    href: '/blog/the-time-machine',
+    title: 'Space Invaders',
+    description: `A web-based recreation of the classic Space Invaders arcade game. Defend Earth from waves of descending alien invaders!`,
+    imgSrc: '',
+    href: 'https://space-invaders-tawny-xi.vercel.app/',
+  },
+  {
+    title: 'Subby',
+    description: `Subby — a mobile-first PWA for managing sports team substitutions on the go. Keep track of who's on the bench and on the field so everyone gets a fair run.`,
+    imgSrc: '',
+    href: 'https://subby.dandoescode.com/',
   },
 ]
 
