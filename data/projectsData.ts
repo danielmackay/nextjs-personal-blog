@@ -12,6 +12,12 @@ const projectsData = [
     href: 'https://space-invaders-tawny-xi.vercel.app/',
   },
   {
+    title: 'Pac-Man',
+    description: `A web-based recreation of the classic Pac-Man arcade game. Navigate the maze, eat all the dots, and avoid the ghosts!`,
+    imgSrc: '',
+    href: 'https://pacman-navy-xi.vercel.app/',
+  },
+  {
     title: 'Subby',
     description: `Subby — a mobile-first PWA for managing sports team substitutions on the go. Keep track of who's on the bench and on the field so everyone gets a fair run.`,
     imgSrc: '',
