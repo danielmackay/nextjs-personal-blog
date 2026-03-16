@@ -17,6 +17,12 @@ const projectsData = [
     imgSrc: '',
     href: 'https://subby.dandoescode.com/',
   },
+  {
+    title: 'RSVP Teleprompter',
+    description: `A web-based RSVP (Rapid Serial Visual Presentation) teleprompter. Paste any text and read it word-by-word at a configurable speed — great for focused reading and improving reading pace.`,
+    imgSrc: '',
+    href: 'https://rsvp-teleprompter.vercel.app/',
+  },
 ]
 
 export default projectsData
