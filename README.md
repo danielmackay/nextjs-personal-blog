@@ -17,21 +17,15 @@ Check out the documentation below to get started.
 ## Installation
 
 ```bash
- yarn
+bun install
 ```
 
 ## Development
 
-If you're on windows you'll first need to run the following command in PowerShell:
-
-```bash
- $env:PWD = Get-Location
-```
-
 First, run the development server:
 
 ```bash
- yarn dev
+bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
