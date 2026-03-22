@@ -18,7 +18,9 @@ Here's something that starts to happen when you lean into parallel vibe coding w
 
 I wrote about [running multiple Claude Code sessions in parallel with git worktrees](/blog/parallel-vibe-coding-with-git-worktrees) — and while that workflow is genuinely great once it clicks, the disorientation problem is real. The terminal prompt helps a little, but it's easy to miss when you're heads-down reviewing generated code.
 
-My first instinct was to find a tool that already solved this. Turns out there are a few:
+Besides your current worktree, the other thing you want to keep an eye on is how token-hungry your prompts actually are. Claude Code has a built-in `/usage` command — run it any time during a session to see a breakdown of your token consumption. It's a quick gut-check before you start worrying about rate limits or costs, and a good habit to build before reaching for heavier tooling.
+
+For both these use cases, my first instinct was to find a tool that already solved this. Turns out there are a few:
 
 - [ccusage](https://github.com/ryoppippi/ccusage) — a detailed usage dashboard with charts, cost breakdowns, session history, and more
 - [Claude Code Usage Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor) — a floating overlay panel tracking your burn rate and limits
@@ -60,6 +62,8 @@ When Claude Code runs your statusline command, it pipes a JSON object to stdin o
 
 The `rate_limits` field is the piece I was missing initially — it was added in **Claude Code v1.2.80**. Before that, the worktree and branch info was enough to solve the disorientation problem, but being able to see my 5-hour rate limit at a glance was the cherry on top.
 
+See the [Claude Code docs](https://code.claude.com/docs/en/statusline#available-data) for the full JSON reference.
+
 ## The Script
 
 The full script lives at [`statusline-command.sh`](https://github.com/danielmackay/claude-code-statusline) in my repo. Drop it in `~/.claude/statusline-command.sh` and make it executable:
@@ -70,69 +74,7 @@ curl -o ~/.claude/statusline-command.sh \
 chmod +x ~/.claude/statusline-command.sh
 ```
 
-Here's the full script:
-
-```bash
-#!/bin/sh
-input=$(cat)
-
-model=$(echo "$input" | jq -r '.model.display_name // "Unknown Model"')
-used=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
-worktree=$(echo "$input" | jq -r '.worktree.name // empty')
-total_cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
-lines_added=$(echo "$input" | jq -r '.cost.total_lines_added // empty')
-lines_removed=$(echo "$input" | jq -r '.cost.total_lines_removed // empty')
-current_dir=$(echo "$input" | jq -r '.workspace.current_dir // empty')
-rl_5h_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty' | awk '{printf "%.0f", $1}')
-rl_5h_reset=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
-
-# ... formatting helpers below
-```
-
-The interesting bit is `make_bar` — a pure POSIX shell function that converts a percentage into a 10-block Unicode progress bar with no external tools:
-
-```bash
-make_bar() {
-  pct="$1"
-  width=10
-  filled=$(( pct * width / 100 ))
-  empty=$(( width - filled ))
-  bar=""
-  i=0
-  while [ $i -lt $filled ]; do bar="${bar}█"; i=$(( i + 1 )); done
-  while [ $i -lt $width ];  do bar="${bar}░"; i=$(( i + 1 )); done
-  printf "%s" "$bar"
-}
-```
-
-The rate limit formatter applies colour coding based on how close you are to the limit:
-
-```bash
-format_rl() {
-  pct="$1"; reset_ts="$2"; label="$3"
-  [ -z "$pct" ] && return
-  if   [ "$pct" -ge 90 ]; then color="$RED"
-  elif [ "$pct" -ge 70 ]; then color="$YELLOW"
-  else                         color="$GREEN"
-  fi
-  reset_time=$(date -r "$reset_ts" "+%-I:%M%p" 2>/dev/null \
-    || date -d "@$reset_ts" "+%-I:%M%p" 2>/dev/null)
-  bar=$(make_bar "$pct")
-  printf "${color}${label} ${bar} ${pct}%% resets ${reset_time}${RESET}"
-}
-```
-
-Green below 70%, yellow from 70–89%, red at 90%+. The dual `date` call handles both macOS (`date -r`) and Linux (`date -d`).
-
-The final output is two lines:
-
-```bash
-printf "🤖 %s | 🧠 %s | 💰 %s | ⏱️ %s\n🌳 %s | %s" \
-  "$model" "$usage_str" "$block_str" "$rate_limit_str" \
-  "$worktree_str" "$git_str"
-```
-
-Which renders as something like:
+The output looks like this:
 
 ```
 🤖 Claude Sonnet 4.6 | 🧠 12% | 💰 $0.04 | ⏱️ 5h ████░░░░░░ 42% resets 2:00PM
@@ -159,7 +101,7 @@ Add the statusline config to `~/.claude/settings.json`:
 
 That's it. Restart Claude Code and the statusline appears at the bottom of the terminal. No daemon, no background process — Claude Code calls the script directly on each update.
 
-PLACEHOLDER_IMAGE: Screenshot showing the two-line statusline at the bottom of a Claude Code terminal session, with the rate limit bar in green and worktree/branch info visible on line 2.
+![Claude Code statusline showing model, context, cost, rate limit bar, worktree and branch info](/static/images/claude-code-custom-statusline/statusline-screenshot.png)
 
 ## What I Didn't Build (On Purpose)
 
@@ -169,9 +111,17 @@ But for the day-to-day disorientation problem that comes from parallel worktrees
 
 That's the thing about solving the *actual* problem you have rather than the generalised version of it. The answer is usually smaller than you expected.
 
+## Final Thought
+
+Not long ago, the standard engineering debate was *buy vs. build*. Build meant weeks of work, so buy — or at least reuse something existing — was often the pragmatic call, even if the existing tool only got you 80% of the way there.
+
+That calculus has shifted. With AI-assisted development, building is often so fast that the question barely registers. Why settle for a tool that almost fits when you can have exactly what you need in an afternoon? The 20% gap — the wrong defaults, the features you'll never use, the config schema you have to learn — used to be the price of moving quickly. Now it's optional.
+
+This statusline is a small example of that. I looked at three good tools, decided none of them were quite right, and built my own in a single session. The cost of building dropped below the cost of compromising.
+
 ## Summary
 
-- Claude Code has a built-in `statusLine` config that lets you pipe live session data into any shell command
+- Claude Code has a built-in `/statusLine` config that lets you pipe live session data into any shell command
 - A simple `jq` + `printf` script is enough to display model, context usage, session cost, 5-hour rate limit, worktree, and branch
 - Rate limit data (`rate_limits.five_hour`) became available in Claude Code v1.2.80
 - The script handles both macOS and Linux date formatting, uses ANSI colour codes for the rate limit bar, and has no dependencies beyond `jq` and `git`
