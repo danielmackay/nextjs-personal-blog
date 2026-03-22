@@ -1,0 +1,137 @@
+---
+title: 'Building a Custom Claude Code Statusline to Track Worktrees and Usage'
+date: '2026-03-22'
+tags: ['ai', 'tooling', 'vibe-coding', 'devex', 'productivity']
+draft: false
+summary: "When vibe coding across multiple git worktrees, losing track of which branch you're on is a real problem. Here's how I built a minimal Claude Code statusline that shows exactly what I need — and nothing more."
+images: ['/static/images/claude-code-custom-statusline/banner.png']
+layout: PostLayout
+---
+
+![Banner](/static/images/claude-code-custom-statusline/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## Introduction
+
+Here's something that starts to happen when you lean into parallel vibe coding with git worktrees: you lose track of where you are. You've got three terminal windows open, Claude Code running in each of them, and somewhere around the second context switch you realise you're not entirely sure which worktree you're in or which branch it's tracking. You *think* you're on the payments feature. But are you?
+
+I wrote about [running multiple Claude Code sessions in parallel with git worktrees](/blog/parallel-vibe-coding-with-git-worktrees) — and while that workflow is genuinely great once it clicks, the disorientation problem is real. The terminal prompt helps a little, but it's easy to miss when you're heads-down reviewing generated code.
+
+Besides your current worktree, the other thing you want to keep an eye on is how token-hungry your prompts actually are. Claude Code has a built-in `/usage` command — run it any time during a session to see a breakdown of your token consumption. It's a quick gut-check before you start worrying about rate limits or costs, and a good habit to build before reaching for heavier tooling.
+
+For both these use cases, my first instinct was to find a tool that already solved this. Turns out there are a few:
+
+- [ccusage](https://github.com/ryoppippi/ccusage) — a detailed usage dashboard with charts, cost breakdowns, session history, and more
+- [Claude Code Usage Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor) — a floating overlay panel tracking your burn rate and limits
+- [ccstatusline](https://github.com/sirmalloc/ccstatusline) — a full-featured statusline with 30+ configurable widgets and a TUI for configuration
+
+All three are genuinely impressive. But all three were solving a broader problem than mine. I didn't need a dashboard. I didn't need session history or a floating overlay. I just needed to glance at my terminal and know: *which worktree am I in, and which branch?*
+
+While browsing Claude Code's built-in slash commands one afternoon, I stumbled on `/statusline`. Turns out Claude Code has a first-class mechanism for exactly this — you give it a shell command, it feeds that command a JSON blob on every tick, and whatever your command prints becomes the statusline. That's it. No framework, no config file schema to learn, no TUI. Just a shell script.
+
+In this post I'll walk through the script I built, how to wire it up, and the one thing that was missing until Claude Code v1.2.80 shipped.
+
+## Prerequisites
+
+- [Claude Code](https://claude.ai/code) CLI installed
+- [`jq`](https://stedolan.github.io/jq/) for JSON parsing (`brew install jq` on macOS)
+- `git`
+
+## The Statusline JSON
+
+When Claude Code runs your statusline command, it pipes a JSON object to stdin on each update. The shape looks like this:
+
+```json
+{
+  "model": { "display_name": "Claude Sonnet 4.6" },
+  "context_window": { "used_percentage": 12.4 },
+  "cost": {
+    "total_cost_usd": 0.04,
+    "total_lines_added": 42,
+    "total_lines_removed": 7
+  },
+  "workspace": { "current_dir": "/Users/daniel/projects/my-app-payments" },
+  "worktree": { "name": "my-app-payments" },
+  "rate_limits": {
+    "five_hour": { "used_percentage": 42, "resets_at": 1742651200 },
+    "seven_day": { "used_percentage": 18, "resets_at": 1743120000 }
+  }
+}
+```
+
+The `rate_limits` field is the piece I was missing initially — it was added in **Claude Code v1.2.80**. Before that, the worktree and branch info was enough to solve the disorientation problem, but being able to see my 5-hour rate limit at a glance was the cherry on top.
+
+See the [Claude Code docs](https://code.claude.com/docs/en/statusline#available-data) for the full JSON reference.
+
+## The Script
+
+The full script lives at [`statusline-command.sh`](https://github.com/danielmackay/claude-code-statusline) in my repo. Drop it in `~/.claude/statusline-command.sh` and make it executable:
+
+```bash
+curl -o ~/.claude/statusline-command.sh \
+  https://raw.githubusercontent.com/danielmackay/claude-code-statusline/main/statusline-command.sh
+chmod +x ~/.claude/statusline-command.sh
+```
+
+The output looks like this:
+
+```
+🤖 Claude Sonnet 4.6 | 🧠 12% | 💰 $0.04 | ⏱️ 5h ████░░░░░░ 42% resets 2:00PM
+🌳 my-app-payments | 🌿 feature/payments +42 -7
+```
+
+Line 1 is all Claude session metadata. Line 2 is git context — worktree, branch, and the lines-changed stats for the session. At a glance I can see exactly where I am.
+
+> **Note:** The 7-day rate limit line is in the script but commented out. If you want it, uncomment the `rate_limit_str` line near the bottom that references `rl_7d_pct`.
+
+## Wiring It Up
+
+Add the statusline config to `~/.claude/settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "sh ~/.claude/statusline-command.sh",
+    "padding": 0
+  }
+}
+```
+
+That's it. Restart Claude Code and the statusline appears at the bottom of the terminal. No daemon, no background process — Claude Code calls the script directly on each update.
+
+![Claude Code statusline showing model, context, cost, rate limit bar, worktree and branch info](/static/images/claude-code-custom-statusline/statusline-screenshot.png)
+
+## What I Didn't Build (On Purpose)
+
+The tools I evaluated earlier are all good pieces of work. ccusage in particular is excellent if you want historical cost tracking across sessions. If you're running Claude Code at scale — billing to a team, tracking burn rate over days — you should use it.
+
+But for the day-to-day disorientation problem that comes from parallel worktrees, a 60-line shell script is all that's needed. The statusline runs in-process, updates live, requires no background service, and is trivially customisable — it's just `printf` calls. If you want to swap in different fields, add a ticket number from your branch name, or show something completely different, the script is right there to edit.
+
+That's the thing about solving the *actual* problem you have rather than the generalised version of it. The answer is usually smaller than you expected.
+
+## Final Thought
+
+Not long ago, the standard engineering debate was *buy vs. build*. Build meant weeks of work, so buy — or at least reuse something existing — was often the pragmatic call, even if the existing tool only got you 80% of the way there.
+
+That calculus has shifted. With AI-assisted development, building is often so fast that the question barely registers. Why settle for a tool that almost fits when you can have exactly what you need in an afternoon? The 20% gap — the wrong defaults, the features you'll never use, the config schema you have to learn — used to be the price of moving quickly. Now it's optional.
+
+This statusline is a small example of that. I looked at three good tools, decided none of them were quite right, and built my own in a single session. The cost of building dropped below the cost of compromising.
+
+## Summary
+
+- Claude Code has a built-in `/statusLine` config that lets you pipe live session data into any shell command
+- A simple `jq` + `printf` script is enough to display model, context usage, session cost, 5-hour rate limit, worktree, and branch
+- Rate limit data (`rate_limits.five_hour`) became available in Claude Code v1.2.80
+- The script handles both macOS and Linux date formatting, uses ANSI colour codes for the rate limit bar, and has no dependencies beyond `jq` and `git`
+- If you want more — session history, dashboards, multi-window overlays — check out ccusage or ccstatusline
+
+## Resources
+
+- [claude-code-statusline](https://github.com/danielmackay/claude-code-statusline) — the script from this post
+- [Claude Code statusline docs](https://docs.anthropic.com/en/docs/claude-code/settings#status-line) — official configuration reference
+- [ccusage](https://github.com/ryoppippi/ccusage) — detailed usage reporting across sessions
+- [Claude Code Usage Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor) — floating overlay for burn rate tracking
+- [ccstatusline](https://github.com/sirmalloc/ccstatusline) — full-featured statusline with 30+ widgets
+- [Parallel Vibe Coding with Git Worktrees](/blog/parallel-vibe-coding-with-git-worktrees) — the workflow that made this problem worth solving
