@@ -7,6 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: 'GPTBot',
         disallow: '/',
+        allow: '/feed.xml',
       },
       {
         userAgent: '*',
