@@ -12,7 +12,7 @@ const siteMetadata = {
   image: '/static/images/avatar.png',
   socialBanner: '/static/images/twitter-card.png',
   //mastodon: 'https://mastodon.social/@mastodonuser',
-  //email: 'address@yoursite.com',
+  email: 'me@dandoescode.com',
   github: 'https://github.com/danielmackay',
   twitter: 'https://twitter.com/daniel_mackay',
   //facebook: 'https://facebook.com',
