@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Diagram</title>
+<script>
+  document.documentElement.dataset.theme =
+    new URLSearchParams(location.search).get('theme') === 'dark' ? 'dark' : 'light';
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  /* Light mode tokens (default) */
+  :root {
+    --text: #111827;
+    --text-2: #374151;
+    --primary: #0EA5E9;
+    --primary-strong: #0284C7;
+    --accent: #EC4899;
+    --accent-soft: #FCE7F3;
+    --ui: #E5E7EB;
+    --node-border: #BAE6FD;
+  }
+
+  /* Dark mode overrides */
+  :root[data-theme="dark"] {
+    --text: #F3F4F6;
+    --text-2: #D1D5DB;
+    --primary: #38BDF8;
+    --primary-strong: #0EA5E9;
+    --accent: #F472B6;
+    --accent-soft: #831843;
+    --ui: #1F2937;
+    --node-border: #0369A1;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body {
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--text);
+    width: 1400px;
+    padding: 12px;
+  }
+
+  .stack { display: flex; flex-direction: column; gap: 20px; }
+
+  .card {
+    border: 1px solid var(--ui);
+    border-radius: 22px;
+    padding: 32px;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .card-head { display: flex; align-items: center; gap: 18px; }
+  .card-head .rank {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 28px;
+    flex-shrink: 0;
+    letter-spacing: -0.02em;
+  }
+  :root[data-theme="dark"] .card-head .rank { background: var(--primary-strong); }
+  .card-head .titles { display: flex; flex-direction: column; gap: 4px; }
+  .card-head .title {
+    font-size: 26px; font-weight: 700;
+    color: var(--text);
+    margin: 0; line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+  .card-head .sub {
+    font-size: 17px;
+    color: var(--text-2);
+    margin: 0; line-height: 1.35;
+    font-weight: 400;
+  }
+
+  .flow { display: flex; align-items: stretch; justify-content: center; gap: 0; }
+
+  .node {
+    background: transparent;
+    border: 2px solid var(--node-border);
+    border-radius: 12px;
+    padding: 16px 14px;
+    text-align: center;
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    flex: 1; min-width: 0;
+    line-height: 1.3;
+  }
+  .node.brand {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    flex: 1.5;
+  }
+  :root[data-theme="dark"] .node.brand {
+    background: var(--primary-strong);
+    border-color: var(--primary-strong);
+  }
+  .node.faint {
+    background: transparent;
+    border-style: dashed;
+    border-color: var(--node-border);
+    color: var(--text-2);
+  }
+
+  .arrow {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 0 12px;
+    flex-shrink: 0;
+    min-width: 160px;
+  }
+  .arrow .label {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 600;
+    font-size: 16px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 4px 11px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    white-space: nowrap;
+  }
+  .arrow .label.multi {
+    display: flex; flex-direction: column; gap: 4px;
+    background: transparent; padding: 0;
+  }
+  .arrow .label.multi span {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 4px 11px;
+    border-radius: 6px;
+  }
+  .arrow .head {
+    font-size: 32px; line-height: 1;
+    color: var(--primary);
+    margin-top: 4px;
+    font-weight: 700;
+  }
+  .arrow.dashed .head { opacity: 0.55; }
+
+  .unifying {
+    margin-top: 22px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 18px;
+    padding: 24px 32px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+  :root[data-theme="dark"] .unifying { background: var(--primary-strong); }
+  .unifying code {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    background: rgba(255,255,255,0.2);
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin: 0 3px;
+    font-weight: 600;
+    font-size: 22px;
+  }
+  .unifying strong { font-weight: 700; }
+</style>
+</head>
+<body>
+  <!--
+    Each .card is one row showing a horizontal flow.
+    Inside .flow: alternate .node and .arrow elements.
+    Use class="brand" on the orchestrator / hot node (gets sky-blue fill).
+    Use class="faint" on external / passive nodes (gets dashed outline).
+    Use .arrow .label.multi when you need to stack multiple labels on one arrow.
+    The .unifying band is optional — use it to state a property common to all rows.
+  -->
+
+  <div class="stack">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="rank">1</div>
+        <div class="titles">
+          <p class="title">First flow</p>
+          <p class="sub">One-line summary of what happens here.</p>
+        </div>
+      </div>
+      <div class="flow">
+        <div class="node faint">Source</div>
+        <div class="arrow"><span class="label">label</span><span class="head">→</span></div>
+        <div class="node brand">Orchestrator</div>
+        <div class="arrow">
+          <span class="label multi"><span>mechanism A</span><span>mechanism B</span></span>
+          <span class="head">→</span>
+        </div>
+        <div class="node">Target</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="rank">2</div>
+        <div class="titles">
+          <p class="title">Second flow</p>
+          <p class="sub">Another summary line.</p>
+        </div>
+      </div>
+      <div class="flow">
+        <div class="node faint">Source</div>
+        <div class="arrow"><span class="label">label</span><span class="head">→</span></div>
+        <div class="node brand">Orchestrator</div>
+        <div class="arrow"><span class="label">label</span><span class="head">→</span></div>
+        <div class="node">Target</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="rank">3</div>
+        <div class="titles">
+          <p class="title">Third flow</p>
+          <p class="sub">And one more.</p>
+        </div>
+      </div>
+      <div class="flow">
+        <div class="node faint">Source</div>
+        <div class="arrow dashed"><span class="label">label</span><span class="head">→</span></div>
+        <div class="node brand">Orchestrator</div>
+        <div class="arrow"><span class="label">label</span><span class="head">→</span></div>
+        <div class="node">Target</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="unifying">
+    The shared property all three flows have. Inline <code>code</code> renders as a translucent pill.
+  </div>
+</body>
+</html>
