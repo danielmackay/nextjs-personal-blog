@@ -1,6 +1,7 @@
 import Image from './Image'
 import Link from './Link'
 import GithubStars from './GithubStars'
+import Reveal from './Reveal'
 import { Github } from './social-icons/icons'
 import type { Project } from '@/data/projectsData'
 
@@ -21,7 +22,7 @@ const FeaturedProjectCard = ({ project, stars, flip = false, priority = false }:
 
   return (
     <article className="grid items-center gap-8 py-10 md:grid-cols-2 md:gap-12 lg:grid-cols-[1.2fr_0.8fr]">
-      <div className={flip ? 'lg:order-2' : ''}>
+      <Reveal className={flip ? 'lg:order-2' : ''}>
         <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
           Featured{platform && ` · ${platform}`}
         </p>
@@ -65,17 +66,19 @@ const FeaturedProjectCard = ({ project, stars, flip = false, priority = false }:
             </Link>
           )}
         </div>
-      </div>
-      <div className={`flex justify-center ${flip ? 'lg:order-1' : ''}`}>
-        <Image
-          alt={`${title} screenshot`}
-          src={imgSrc}
-          width={project.imgWidth ?? 375}
-          height={project.imgHeight ?? 667}
-          priority={priority}
-          className="w-full max-w-[260px] rounded-2xl border border-gray-200 shadow-[0_24px_48px_-24px_rgba(2,132,199,0.35)] dark:border-gray-700 dark:shadow-[0_24px_48px_-24px_rgba(56,189,248,0.25)]"
-        />
-      </div>
+      </Reveal>
+      <Reveal delay={120} className={`flex justify-center ${flip ? 'lg:order-1' : ''}`}>
+        <Link href={href} aria-label={`Link to ${title}`}>
+          <Image
+            alt={`${title} screenshot`}
+            src={imgSrc}
+            width={project.imgWidth ?? 375}
+            height={project.imgHeight ?? 667}
+            priority={priority}
+            className="w-full max-w-[260px] rounded-2xl border border-gray-200 shadow-[0_24px_48px_-24px_rgba(2,132,199,0.35)] transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-1 hover:shadow-[0_32px_56px_-24px_rgba(2,132,199,0.45)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:border-gray-700 dark:shadow-[0_24px_48px_-24px_rgba(56,189,248,0.25)] dark:hover:shadow-[0_32px_56px_-24px_rgba(56,189,248,0.35)]"
+          />
+        </Link>
+      </Reveal>
     </article>
   )
 }

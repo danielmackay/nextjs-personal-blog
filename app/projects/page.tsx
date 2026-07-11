@@ -37,7 +37,7 @@ export default async function Projects() {
         ))}
         <div className="container py-12">
           <div className="-m-4 flex flex-wrap">
-            {rest.map((d) => {
+            {rest.map((d, i) => {
               const stars = starsByTitle.get(d.title) ?? null
               return (
                 <Card
@@ -47,6 +47,8 @@ export default async function Projects() {
                   imgSrc={d.imgSrc}
                   href={d.href}
                   stars={stars}
+                  // Right-hand column trails its row partner slightly as rows scroll in
+                  revealDelay={(i % 2) * 100}
                   githubUrl={
                     d.github && stars !== null ? `https://github.com/${d.github}` : undefined
                   }

@@ -1,6 +1,7 @@
 import Image from './Image'
 import Link from './Link'
 import GithubStars from './GithubStars'
+import Reveal from './Reveal'
 import { Github, Website } from './social-icons/icons'
 
 interface CardProps {
@@ -12,14 +13,17 @@ interface CardProps {
   githubUrl?: string
   /** Star count; the badge renders only when ≥ 1 */
   stars?: number | null
+  /** Scroll-reveal stagger in ms, e.g. alternating per grid column */
+  revealDelay?: number
 }
 
 const iconLinkClasses =
-  'text-gray-700 hover:text-primary-500 dark:text-gray-200 dark:hover:text-primary-400'
+  'text-gray-700 transition-colors hover:text-primary-500 dark:text-gray-200 dark:hover:text-primary-400'
 
-const Card = ({ title, description, imgSrc, href, githubUrl, stars }: CardProps) => (
+const Card = ({ title, description, imgSrc, href, githubUrl, stars, revealDelay }: CardProps) => (
   <div className="md max-w-[544px] p-4 md:w-1/2">
-    <div
+    <Reveal
+      delay={revealDelay}
       className={`${
         imgSrc && 'h-full'
       }  overflow-hidden rounded-md border-2 border-gray-200 border-opacity-60 dark:border-gray-700`}
@@ -79,7 +83,7 @@ const Card = ({ title, description, imgSrc, href, githubUrl, stars }: CardProps)
           )}
         </div>
       </div>
-    </div>
+    </Reveal>
   </div>
 )
 

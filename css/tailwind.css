@@ -37,3 +37,21 @@ input:-webkit-autofill:focus {
 .prose :where(pre):not(:where([class~="not-prose"],[class~="not-prose"] *)){
   @apply dark:bg-gray-900;
 }
+
+/* Scroll-reveal: elements start hidden only when motion is allowed, so
+   reduced-motion users and non-JS visitors always see content immediately. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+      opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
