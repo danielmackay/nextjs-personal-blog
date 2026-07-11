@@ -2,6 +2,7 @@ import Image from './Image'
 import Link from './Link'
 import GithubStars from './GithubStars'
 import Reveal from './Reveal'
+import PacManChase from './PacManChase'
 import { Github, Website } from './social-icons/icons'
 
 interface CardProps {
@@ -15,18 +16,29 @@ interface CardProps {
   stars?: number | null
   /** Scroll-reveal stagger in ms, e.g. alternating per grid column */
   revealDelay?: number
+  /** Hover-revealed easter egg next to the title */
+  easterEgg?: 'pacman'
 }
 
 const iconLinkClasses =
   'text-gray-700 transition-colors hover:text-primary-500 dark:text-gray-200 dark:hover:text-primary-400'
 
-const Card = ({ title, description, imgSrc, href, githubUrl, stars, revealDelay }: CardProps) => (
+const Card = ({
+  title,
+  description,
+  imgSrc,
+  href,
+  githubUrl,
+  stars,
+  revealDelay,
+  easterEgg,
+}: CardProps) => (
   <div className="md max-w-[544px] p-4 md:w-1/2">
     <Reveal
       delay={revealDelay}
       className={`${
         imgSrc && 'h-full'
-      }  overflow-hidden rounded-md border-2 border-gray-200 border-opacity-60 dark:border-gray-700`}
+      }  group overflow-hidden rounded-md border-2 border-gray-200 border-opacity-60 dark:border-gray-700`}
     >
       {imgSrc &&
         (href ? (
@@ -58,6 +70,7 @@ const Card = ({ title, description, imgSrc, href, githubUrl, stars, revealDelay 
             title
           )}
           {typeof stars === 'number' && stars > 0 && <GithubStars stars={stars} />}
+          {easterEgg === 'pacman' && <PacManChase />}
         </h2>
         <p className="prose mb-3 max-w-none text-gray-500 dark:text-gray-400">{description}</p>
         <div className="flex items-center gap-4">

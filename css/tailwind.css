@@ -40,6 +40,42 @@ input:-webkit-autofill:focus {
 
 /* Scroll-reveal: elements start hidden only when motion is allowed, so
    reduced-motion users and non-JS visitors always see content immediately. */
+/* Delight keyframes: referenced via Tailwind arbitrary animate values, so they
+   only run where a hover explicitly asks for them. */
+@keyframes star-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-14deg);
+  }
+  75% {
+    transform: rotate(14deg);
+  }
+}
+
+@keyframes pac-chomp {
+  0%,
+  100% {
+    clip-path: polygon(100% 74%, 44% 48%, 100% 21%, 100% 0%, 0% 0%, 0% 100%, 100% 100%);
+  }
+  50% {
+    clip-path: polygon(100% 60%, 44% 48%, 100% 40%, 100% 0%, 0% 0%, 0% 100%, 100% 100%);
+  }
+}
+
+@keyframes pac-dot-eaten {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .reveal {
     opacity: 0;

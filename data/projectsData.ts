@@ -18,6 +18,8 @@ export interface Project {
   platform?: string
   /** Call-to-action label; defaults to 'Learn more' on grid cards */
   cta?: string
+  /** Hover-revealed easter egg on the grid card title */
+  easterEgg?: 'pacman'
 }
 
 const projectsData: Project[] = [
@@ -87,6 +89,7 @@ const projectsData: Project[] = [
     imgSrc: '',
     href: 'https://pacman-navy-xi.vercel.app/',
     github: 'danielmackay/pacman',
+    easterEgg: 'pacman',
   },
 ]
 
