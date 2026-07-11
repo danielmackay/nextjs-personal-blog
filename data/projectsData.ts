@@ -29,6 +29,24 @@ const projectsData = [
     imgSrc: '',
     href: 'https://rsvp-teleprompter.vercel.app/',
   },
+  {
+    title: 'Gym Buddy',
+    description: `A native iOS workout-tracking app built with SwiftUI. Guides you through your sessions with automatic rest timers, works offline, and syncs across devices via iCloud — no subscription, just a one-time Pro unlock.`,
+    imgSrc: '',
+    href: 'https://gymbuddy.dandoescode.com/',
+  },
+  {
+    title: 'Dollarbucks',
+    description: `A mobile-first PWA for managing children's allowances and chores. Parents set chores per child that either pay out instantly or build weighted credit toward a weekly allowance, with a full ledger tracking every child's running balance.`,
+    imgSrc: '',
+    href: 'https://dollarbucks.vercel.app/',
+  },
+  {
+    title: 'Claude Code Statusline',
+    description: `A custom statusline script for Claude Code that shows real-time session info in your terminal — active model, context usage, cost, rate limits, and git branch, all with emojis and progress bars.`,
+    imgSrc: '',
+    href: 'https://github.com/danielmackay/claude-code-statusline',
+  },
 ]
 
 export default projectsData

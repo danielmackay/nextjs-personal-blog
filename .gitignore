@@ -46,3 +46,4 @@ npm-debug.log*
 
 /tmp
 .playwright-mcp/
+tmp/screenshots/
