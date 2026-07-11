@@ -1,7 +1,23 @@
 import Image from './Image'
 import Link from './Link'
+import GithubStars from './GithubStars'
+import { Github, Website } from './social-icons/icons'
 
-const Card = ({ title, description, imgSrc, href }) => (
+interface CardProps {
+  title: string
+  description: string
+  imgSrc?: string
+  href?: string
+  /** GitHub repo URL; only pass when the repo is publicly readable */
+  githubUrl?: string
+  /** Star count; the badge renders only when ≥ 1 */
+  stars?: number | null
+}
+
+const iconLinkClasses =
+  'text-gray-700 hover:text-primary-500 dark:text-gray-200 dark:hover:text-primary-400'
+
+const Card = ({ title, description, imgSrc, href, githubUrl, stars }: CardProps) => (
   <div className="md max-w-[544px] p-4 md:w-1/2">
     <div
       className={`${
@@ -29,7 +45,7 @@ const Card = ({ title, description, imgSrc, href }) => (
           />
         ))}
       <div className="p-6">
-        <h2 className="mb-3 text-2xl font-bold leading-8 tracking-tight">
+        <h2 className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xl font-bold leading-8 tracking-tight">
           {href ? (
             <Link href={href} aria-label={`Link to ${title}`}>
               {title}
@@ -37,17 +53,31 @@ const Card = ({ title, description, imgSrc, href }) => (
           ) : (
             title
           )}
+          {typeof stars === 'number' && stars > 0 && <GithubStars stars={stars} />}
         </h2>
         <p className="prose mb-3 max-w-none text-gray-500 dark:text-gray-400">{description}</p>
-        {href && (
-          <Link
-            href={href}
-            className="text-base font-medium leading-6 text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-            aria-label={`Link to ${title}`}
-          >
-            Learn more &rarr;
-          </Link>
-        )}
+        <div className="flex items-center gap-4">
+          {href && href !== githubUrl && (
+            <Link
+              href={href}
+              className={iconLinkClasses}
+              aria-label={`${title} website`}
+              title="Website"
+            >
+              <Website className="h-5 w-5 fill-none stroke-current" />
+            </Link>
+          )}
+          {githubUrl && (
+            <Link
+              href={githubUrl}
+              className={iconLinkClasses}
+              aria-label={`${title} on GitHub`}
+              title="GitHub"
+            >
+              <Github className="h-5 w-5 fill-current" />
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   </div>
