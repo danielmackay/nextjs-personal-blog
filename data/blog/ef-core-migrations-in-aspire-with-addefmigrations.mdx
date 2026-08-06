@@ -121,7 +121,8 @@ dotnet add package Aspire.Hosting.EntityFrameworkCore
 The key idea: it's an extension on a **project resource you already have**, not a new project you write. You point it at the project that hosts your `DbContext`, and Aspire shells out to `dotnet ef` on your behalf.
 
 ```csharp
-var db = builder.AddSqlServer("sql").AddDatabase("AppDb", "app-db");
+var sqlServer = builder.AddSqlServer("sql");
+var db = sqlServer.AddDatabase("AppDb", "app-db");
 
 var api = builder.AddProject<WebApi>("api")
     .WithReference(db);
@@ -318,12 +319,12 @@ builder.Services.ConfigureDbContext<ApplicationDbContext>((serviceProvider, opti
     options.AddInterceptors(serviceProvider.GetRequiredService<EntitySaveChangesInterceptor>()));
 ```
 
-The singleton registrations are the part that trips people up. `AddSqlServerDbContext` registers a **pooled** `DbContext`, and pooled contexts build their options once against the root provider. The root provider can't resolve scoped services, so a `AddScoped<EntitySaveChangesInterceptor>()` here throws at startup. Singleton is correct in a seeder (one process, one identity, no per-operation state), but think about it before you copy this into your API.
+The singleton registrations are the part that trips people up. `AddSqlServerDbContext` registers a **pooled** `DbContext`, and pooled contexts build their options once against the root provider. The root provider can't resolve scoped services, so an `AddScoped<EntitySaveChangesInterceptor>()` here throws at startup. Singleton is correct in a seeder (one process, one identity, no per-operation state), but think about it before you copy this into your API.
 
 If you want to verify this yourself, seed a database and check the audit columns. Every row should show your seeder's identity:
 
 ```sql
-SELECT TOP 5 Name, CreatedBy, Created FROM Heroes;
+SELECT TOP 5 Name, CreatedBy, CreatedAt FROM Heroes;
 -- CreatedBy should be 'Seeder', not NULL
 ```
 
