@@ -47,3 +47,6 @@ npm-debug.log*
 /tmp
 .playwright-mcp/
 tmp/screenshots/
+
+# git worktrees created for agent sessions
+.claude/worktrees/
