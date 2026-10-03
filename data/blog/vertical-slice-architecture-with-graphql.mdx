@@ -41,7 +41,7 @@ If you want to run the code yourself, you'll need:
 - Docker, Podman or OrbStack (Aspire spins up SQL Server in a container)
 - A basic understanding of [Vertical Slice Architecture](https://www.ssw.com.au/rules/rules-to-better-vertical-slice-architecture/) and DDD
 
-Clone the repo, run `dotnet tool restore`, then `aspire start`. Aspire provisions the database, runs the migrations, seeds some heroes and teams, and serves the API at `https://localhost:7255/graphql`. Open that URL in a browser and you get [Nitro](https://chillicream.com/docs/nitro), HotChocolate's built-in GraphQL IDE.
+Clone the repo, run `dotnet tool restore`, then `aspire start`. Aspire provisions the database, runs the migrations (using [AddEFMigrations](/blog/ef-core-migrations-in-aspire-with-addefmigrations)), seeds some heroes and teams, and serves the API at `https://localhost:7255/graphql`. Open that URL in a browser and you get [Nitro](https://chillicream.com/docs/nitro), HotChocolate's built-in GraphQL IDE.
 
 ## What is GraphQL?
 
@@ -91,6 +91,8 @@ And here's what comes back:
 
 Notice the shape of the response mirrors the shape of the query. No more, no less. That's the whole idea.
 
+_NOTE: The seeder builds each hero's alias from the first two letters of its name, which is why you'll see aliases like `Gr` in the examples._
+
 ## What problems does GraphQL solve?
 
 So why would you bother? REST works. Most of us have been building REST APIs for years and they're fine. The problems GraphQL solves show up once you have several clients, a rich domain with lots of relationships, or a front-end team that moves faster than the back-end team.
@@ -137,7 +139,7 @@ Those last two rows matter. We'll come back to them in [When not to use GraphQL]
 
 ## The experiment
 
-The SSW template models a small superhero domain. There are two aggregates:
+The SSW template models a small superhero domain. There are two [aggregates](/blog/ddd-modelling-aggregates-vs-entities):
 
 - `Hero` - has a name, alias and a list of powers. Its power level is the sum of its powers.
 - `Team` - has heroes and missions. A team can only go on a mission if it's available and has at least one hero.
@@ -374,7 +376,7 @@ public static partial class HeroType
 }
 ```
 
-`BindFieldsExplicitly()` is important with a rich domain. Without it, HotChocolate binds every public member, *including behaviour*. `UpdatePowers` and `PopDomainEvents` would show up as fields in your public API. Any domain method added later would quietly join the API too. With a rich domain, explicit binding isn't optional.
+`BindFieldsExplicitly()` is important with a rich domain. Without it, HotChocolate binds every public member, *including behaviour*. `PopDomainEvents` would show up as a field on `Hero`, and `ExecuteMission` would show up on `Team` (with its `description` parameter as an argument). Any domain method added later would quietly join the API too. With a rich domain, explicit binding isn't optional.
 
 The `GetTeamAsync` method adds a `team` field to `Hero`. Notice the hero's `TeamId` foreign key isn't exposed. Clients follow the `team` edge instead.
 
@@ -400,24 +402,22 @@ Done naively, that's 1 query for the heroes and then 1 query per hero for its te
 A DataLoader collects all the keys requested during one execution and loads them in a single batch:
 
 ```csharp
-public static class HeroDataLoaders
+public static class TeamDataLoaders
 {
     [DataLoader]
-    public static async Task<Dictionary<TeamId, Hero[]>> GetHeroesByTeamIdAsync(
+    public static async Task<Dictionary<TeamId, Team>> GetTeamByIdAsync(
         IReadOnlyList<TeamId> teamIds,
         ApplicationDbContext dbContext,
         CancellationToken cancellationToken)
-        => await dbContext.Heroes
-            .Where(h => h.TeamId != null && teamIds.Contains(h.TeamId.Value))
-            .GroupBy(h => h.TeamId!.Value)
-            .Select(g => new { g.Key, Heroes = g.OrderBy(h => h.Name).ToArray() })
-            .ToDictionaryAsync(g => g.Key, g => g.Heroes, cancellationToken);
+        => await dbContext.Teams
+            .Where(t => teamIds.Contains(t.Id))
+            .ToDictionaryAsync(t => t.Id, cancellationToken);
 }
 ```
 
-The source generator turns that method into an `IHeroesByTeamIdDataLoader` you can inject. Now the query above costs 2 queries, whatever the page size. You can see it in the Aspire dashboard traces. Neat!
+The source generator turns that method into the `ITeamByIdDataLoader` that `HeroType` injects. Now the query above costs 2 queries, whatever the page size. You can see it in the Aspire dashboard traces. Neat!
 
-It also means `teamById` doesn't need any `Include()` calls. Heroes and missions are only loaded if the client actually asks for them.
+The same trick works in the other direction. `Team` gets its `heroes` and `missions` from two more DataLoaders (`GetHeroesByTeamIdAsync` and `GetMissionsByTeamIdAsync`), so `teamById` doesn't need any `Include()` calls. Heroes and missions are only loaded if the client actually asks for them.
 
 ### One gotcha: DbContext and parallel resolvers
 
@@ -546,6 +546,12 @@ builder.AddGraphQL()
 ```
 
 Now, if a client passes a hero ID into `teamById`, the query is rejected during validation, before any of my code runs:
+
+```graphql
+query ($h: HeroId!) {
+  teamById(teamId: $h) { name }
+}
+```
 
 ```json
 {
