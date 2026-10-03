@@ -1,0 +1,680 @@
+---
+title: 'Vertical Slice Architecture with GraphQL'
+date: '2026-10-03'
+tags: ['dotnet', 'graphql', 'hotchocolate', 'vertical-slice-architecture', 'domain-driven-design', 'csharp']
+draft: false
+summary: "What happens when you swap the REST API of a real Vertical Slice Architecture template for GraphQL, and try not to touch the domain? I ported the SSW VSA template to HotChocolate 16 to find out. Here's what GraphQL is, the problems it solves compared to REST, and what it actually looks like in .NET - slices, DataLoaders, typed errors, and a live subscription."
+images: ['/static/images/vertical-slice-architecture-with-graphql/banner.png']
+layout: PostLayout
+---
+
+![Banner](/static/images/vertical-slice-architecture-with-graphql/banner.png)
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## Introduction
+
+I've used GraphQL on and off for years. But almost every time, it's been bolted onto a codebase that was designed around something else. A REST API with a GraphQL endpoint stuck on the side, or a thin GraphQL layer over a pile of stored procedures. I've never really seen it sitting on top of a *well-structured* .NET backend, with a rich domain model underneath.
+
+At SSW we maintain a [Vertical Slice Architecture template](https://github.com/SSWConsulting/SSW.VerticalSliceArchitecture). It has a proper DDD (Domain-Driven Design) domain with aggregates, strongly typed IDs, domain events and the result pattern. The API is built with [FastEndpoints](/blog/fastendpoints-from-zero-to-hero), one endpoint per slice. That got me wondering. How nicely does GraphQL actually play with vertical slices and a rich domain? And while I'm at it, how good is the latest and greatest version of [HotChocolate](https://chillicream.com/docs/hotchocolate) (v16)?
+
+So I ran an experiment. I forked the template and migrated every endpoint over to GraphQL, with one rule: **leave the domain as untouched as possible**. The result is [SSW.VerticalSliceArchitecture.GraphQL](https://github.com/danielmackay/SSW.VerticalSliceArchitecture.GraphQL).
+
+In this post we'll cover:
+
+- What GraphQL is, and the problems it solves compared to a REST API
+- What changed (and what didn't) when the template moved to GraphQL
+- What a GraphQL vertical slice looks like in .NET with HotChocolate 16
+- A live subscription driven by a domain event
+- The trade-offs, because GraphQL isn't free
+
+The domain in the SSW template is built around superheroes, teams and missions. You'll see those names throughout the examples in this post.
+
+_NOTE: You don't need to know GraphQL to follow along. If you already do, feel free to skip ahead to [The experiment](#the-experiment)._
+
+## Prerequisites
+
+If you want to run the code yourself, you'll need:
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+- [Aspire CLI](https://aspire.dev/get-started/install-cli/)
+- Docker, Podman or OrbStack (Aspire spins up SQL Server in a container)
+- A basic understanding of [Vertical Slice Architecture](https://www.ssw.com.au/rules/rules-to-better-vertical-slice-architecture/) and DDD
+
+Clone the repo, run `dotnet tool restore`, then `aspire start`. Aspire provisions the database, runs the migrations, seeds some heroes and teams, and serves the API at `https://localhost:7255/graphql`. Open that URL in a browser and you get [Nitro](https://chillicream.com/docs/nitro), HotChocolate's built-in GraphQL IDE.
+
+## What is GraphQL?
+
+GraphQL is a query language for APIs. Instead of the server deciding what each endpoint returns, the server publishes a **schema** (a strongly typed description of everything it can do), and the client sends a query describing exactly the data it wants.
+
+There's one endpoint. Everything goes to it as a `POST`. The operation in the body says what you want.
+
+There are three kinds of operation:
+
+| Operation | What it does | Rough REST equivalent |
+| --- | --- | --- |
+| `query` | Reads data | `GET` / `QUERY` |
+| `mutation` | Changes data | `POST` / `PUT` / `DELETE` |
+| `subscription` | Pushes data to the client when something happens | WebSockets / SSE (Server-Sent Events) |
+
+Here's a query against the template. Give me the X-Men, their total power level, and the alias and power level of each hero on the team:
+
+```graphql
+query {
+  teamById(teamId: "01a0ffbd-404e-7ca9-9011-4281dbe780d6") {
+    name
+    totalPowerLevel
+    heroes {
+      alias
+      powerLevel
+    }
+  }
+}
+```
+
+And here's what comes back:
+
+```json
+{
+  "data": {
+    "teamById": {
+      "name": "X-Men",
+      "totalPowerLevel": 24,
+      "heroes": [
+        { "alias": "Wonder Woman", "powerLevel": 19 },
+        { "alias": "Gr", "powerLevel": 5 }
+      ]
+    }
+  }
+}
+```
+
+Notice the shape of the response mirrors the shape of the query. No more, no less. That's the whole idea.
+
+## What problems does GraphQL solve?
+
+So why would you bother? REST works. Most of us have been building REST APIs for years and they're fine. The problems GraphQL solves show up once you have several clients, a rich domain with lots of relationships, or a front-end team that moves faster than the back-end team.
+
+### Over-fetching
+
+In the original template, `GET /api/teams/{teamId}` returns the team, every hero on it, and every power of every hero. If all my UI needs is the team name and the hero aliases, I still download the lot. Multiply that by a mobile app on a bad connection and it adds up.
+
+In GraphQL, the client asks for the fields it needs. The server returns those and nothing else.
+
+### Under-fetching and round trips
+
+The flip side. That same REST endpoint *doesn't* return the team's missions. So if a new screen needs the team, its heroes **and** its missions, I've got two choices:
+
+1. Make an extra call to a missions endpoint (another round trip)
+2. Ask the back-end team to change the endpoint (and wait)
+
+In GraphQL I add `missions { description status }` to my query and I'm done. The relationships in the domain become edges in a graph, and the client walks the graph.
+
+### Endpoint sprawl and versioning
+
+REST APIs tend to grow endpoints for each screen. `GetTeamSummary`, `GetTeamWithHeroes`, `GetTeamForDashboard`... Then a field changes and you're into `/v2/`.
+
+GraphQL has one endpoint and evolves the schema instead. You add fields freely (existing clients don't ask for them, so they don't care), and you mark old ones with `@deprecated` until nobody uses them.
+
+### A typed contract out of the box
+
+The schema *is* the contract. Clients can introspect it, tooling can generate types from it, and invalid queries are rejected before they ever hit your resolvers. OpenAPI gets you a lot of this for REST, but it's documentation that sits next to the API. In GraphQL it's the API itself.
+
+Here's how it all stacks up:
+
+| | REST | GraphQL |
+| --- | --- | --- |
+| Endpoints | Many (one per resource/action) | One |
+| Response shape | Decided by the server | Decided by the client |
+| Related data | Extra calls, or bespoke endpoints | Follow the edges in one query |
+| Contract | OpenAPI (optional, alongside) | Schema (mandatory, built in) |
+| Versioning | Usually URL or header versions | Evolve the schema, deprecate fields |
+| Real-time | Bring your own (SignalR, SSE) | Subscriptions are part of the spec |
+| HTTP caching | Works out of the box | Hard (everything is a `POST`) |
+| Errors | HTTP status codes | Mostly `200 OK`, with the errors in the response body |
+
+Those last two rows matter. We'll come back to them in [When not to use GraphQL](#when-not-to-use-graphql).
+
+## The experiment
+
+The SSW template models a small superhero domain. There are two aggregates:
+
+- `Hero` - has a name, alias and a list of powers. Its power level is the sum of its powers.
+- `Team` - has heroes and missions. A team can only go on a mission if it's available and has at least one hero.
+
+When a hero's powers change, the `Hero` aggregate raises a `PowerLevelUpdatedEvent`, and a handler in the Teams feature recalculates the team's total power level. Classic eventual consistency between aggregates.
+
+The REST API had 9 endpoints:
+
+| REST endpoint | GraphQL field |
+| --- | --- |
+| `GET /api/heroes` | `query { heroes }` |
+| `POST /api/heroes` | `mutation { createHero }` |
+| `PUT /api/heroes/{heroId}` | `mutation { updateHero }` |
+| `GET /api/teams` | `query { teams }` |
+| `GET /api/teams/{teamId}` | `query { teamById }` |
+| `POST /api/teams` | `mutation { createTeam }` |
+| `POST /api/teams/{teamId}/heroes/{heroId}` | `mutation { addHeroToTeam }` |
+| `POST /api/teams/{teamId}/execute-mission` | `mutation { executeMission }` |
+| `POST /api/teams/{teamId}/complete-mission` | `mutation { completeMission }` |
+| _(none)_ | `subscription { heroPowerLevelUpdated }` |
+
+Every slice kept its folder. `Features/Heroes/CreateHero/` still exists. It just contributes a GraphQL field now instead of an HTTP endpoint.
+
+### How much of the domain changed?
+
+This was the bit I was most curious about. If the architecture is doing its job, the API should be a detail. Swapping REST for GraphQL should barely touch the domain.
+
+And it nearly didn't. The diff for the domain was 27 files, almost all of them namespace changes from moving the domain into its own project. The real changes were:
+
+1. Domain events no longer implement FastEndpoints' `IEvent`. This one surprised me. The original domain had a quiet dependency on the web framework, because it used FastEndpoints' event bus. I replaced it with a one-line marker interface that the domain owns:
+
+   ```csharp
+   public interface IDomainEvent;
+   ```
+
+   The dispatcher and handler interface moved into the API project, which is the layer allowed to know about dependency injection.
+
+2. The paging specifications went away. HotChocolate handles paging, filtering and sorting itself (more on that below), so the custom `PagedList` and the paging specs weren't needed.
+
+That's it. `Hero.Create`, `Hero.UpdatePowers`, `Team.ExecuteMission`, the invariants, the errors, the strongly typed IDs... all untouched.
+
+Moving the domain into its own `Domain` project means the compiler now enforces the boundary. Its only packages are Vogen (strongly typed IDs), ErrorOr (the result pattern) and the Ardalis specification abstractions. No EF Core, no ASP.NET Core, no GraphQL. There's an architecture test that fails the build if anyone adds one. 😉
+
+IMO that's exactly what a well-structured domain is supposed to buy you. Neat!
+
+## What a slice looks like now
+
+Let's look at the same use case before and after.
+
+### Before: a FastEndpoints slice
+
+The REST version of `CreateHero` was an endpoint class plus request, response and summary types:
+
+```csharp
+public class CreateHeroEndpoint(ApplicationDbContext dbContext)
+    : Endpoint<CreateHeroRequest, CreateHeroResponse>
+{
+    public override void Configure()
+    {
+        Post("/");
+        Group<HeroesGroup>();
+        Description(x => x.WithName("CreateHero"));
+    }
+
+    public override async Task HandleAsync(CreateHeroRequest req, CancellationToken ct)
+    {
+        var hero = Hero.Create(req.Name, req.Alias);
+        var powers = req.Powers.Select(p => new Power(p.Name, p.PowerLevel));
+        hero.UpdatePowers(powers);
+
+        dbContext.Heroes.Add(hero);
+        await dbContext.SaveChangesAsync(ct);
+
+        await Send.OkAsync(new CreateHeroResponse(hero.Id.Value), ct);
+    }
+}
+```
+
+### After: a HotChocolate slice
+
+The GraphQL version is a static method on a class marked `[MutationType]`:
+
+```csharp
+[MutationType]
+public static partial class CreateHeroMutation
+{
+    [Error<InputValidationError>]
+    public static async Task<Hero> CreateHeroAsync(
+        CreateHeroInput input,
+        IValidator<CreateHeroInput> validator,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(input, cancellationToken);
+
+        var hero = Hero.Create(input.Name, input.Alias);
+        var powers = input.Powers.Select(p => new Power(p.Name, p.PowerLevel));
+        hero.UpdatePowers(powers);
+
+        dbContext.Heroes.Add(hero);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return hero;
+    }
+}
+```
+
+The body is almost identical. The domain calls are line-for-line the same. What changed is everything *around* the body:
+
+- No routing. HotChocolate's source generator finds every `[QueryType]`, `[MutationType]` and `[SubscriptionType]` in the assembly at compile time. A new slice joins the schema just by existing. There's no central list to edit, which is exactly what you want in VSA.
+- It returns the aggregate. The REST endpoint returned only the new ID, so the client needed a second call to see the hero. The mutation returns the `Hero`, and the client picks which fields it wants back.
+- Services are injected as parameters. HotChocolate works out that `CreateHeroInput` is the GraphQL argument and that the validator and `DbContext` are services, which stay out of the schema.
+
+From that one method, HotChocolate's [mutation conventions](https://chillicream.com/docs/hotchocolate/defining-a-schema/mutations#conventions) generate this schema:
+
+```graphql
+type Mutation {
+  createHero(input: CreateHeroInput!): CreateHeroPayload!
+}
+
+type CreateHeroPayload {
+  hero: Hero
+  errors: [CreateHeroError!]
+}
+
+union CreateHeroError = InputValidationError
+```
+
+The schema is checked in at `src/WebApi/schema.graphql`, and there's a test that fails if the server stops matching it. That means every PR that changes the API shows the schema diff for the reviewer. I really like this.
+
+## Queries: paging, filtering and sorting for free
+
+Here's the entire `GetAllHeroes` slice:
+
+```csharp
+[QueryType]
+public static partial class GetAllHeroesQuery
+{
+    [UsePaging]
+    [UseFiltering<HeroFilterType>]
+    [UseSorting<HeroSortType>]
+    public static IQueryable<Hero> GetHeroes(ApplicationDbContext dbContext)
+        => dbContext.Heroes;
+}
+```
+
+One line of real code. It returns an `IQueryable` and the middleware does the rest. The client can now do this:
+
+```graphql
+query {
+  heroes(
+    first: 3
+    where: { powerLevel: { gte: 5 } }
+    order: [{ powerLevel: DESC }]
+  ) {
+    totalCount
+    pageInfo { hasNextPage endCursor }
+    nodes { alias powerLevel }
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "heroes": {
+      "totalCount": 19,
+      "pageInfo": { "hasNextPage": true, "endCursor": "Mg==" },
+      "nodes": [
+        { "alias": "Fl", "powerLevel": 22 },
+        { "alias": "Wonder Woman", "powerLevel": 19 },
+        { "alias": "Ca", "powerLevel": 19 }
+      ]
+    }
+  }
+}
+```
+
+The filter and the sort are translated into SQL by EF Core. Nothing is done in memory. Paging uses cursors in the Relay connection format, so you pass `after: "Mg=="` to get the next page. This replaced about 330 lines of custom paging and sorting code in the original template.
+
+Two things caught me out here:
+
+- The attribute order matters. Paging must run *after* filtering and sorting, otherwise you page the whole table and then filter the page. The order HotChocolate expects is `[UsePaging]`, then `[UseFiltering]`, then `[UseSorting]`, exactly as above.
+- Don't add an `OrderBy` in the resolver. If the `IQueryable` is already ordered, the sorting middleware steps aside and the `order` argument silently does nothing. That one took a while to find.
+
+### Allow-lists, not deny-lists
+
+By default, HotChocolate makes *every* property filterable and sortable. That includes audit columns like `CreatedBy`, and it lets a client write a query that no index supports. So each aggregate gets an explicit allow-list:
+
+```csharp
+public sealed class HeroFilterType : FilterInputType<Hero>
+{
+    protected override void Configure(IFilterInputTypeDescriptor<Hero> descriptor)
+    {
+        descriptor.BindFieldsExplicitly();
+
+        descriptor.Field(h => h.Name);
+        descriptor.Field(h => h.Alias);
+        descriptor.Field(h => h.PowerLevel);
+    }
+}
+```
+
+Try to filter on `createdBy` now and the query is rejected before it runs, because the field doesn't exist in the schema.
+
+## Exposing the domain without polluting it
+
+This was my biggest worry going in. Most HotChocolate samples put attributes straight on the entity. I didn't want a single GraphQL attribute in the domain.
+
+HotChocolate 16 has a nice answer to this: `[ObjectType<T>]`. You describe the GraphQL shape of an aggregate in a separate class, in the API project:
+
+```csharp
+[ObjectType<Hero>]
+public static partial class HeroType
+{
+    static partial void Configure(IObjectTypeDescriptor<Hero> descriptor)
+    {
+        descriptor.BindFieldsExplicitly();
+
+        descriptor.Field(h => h.Id);
+        descriptor.Field(h => h.Name);
+        descriptor.Field(h => h.Alias);
+        descriptor.Field(h => h.PowerLevel);
+        descriptor.Field(h => h.Powers);
+        descriptor.Field(h => h.CreatedAt);
+        descriptor.Field(h => h.UpdatedAt);
+    }
+
+    public static async Task<Team?> GetTeamAsync(
+        [Parent] Hero hero,
+        ITeamByIdDataLoader teamById,
+        CancellationToken cancellationToken)
+        => hero.TeamId is null ? null : await teamById.LoadAsync(hero.TeamId.Value, cancellationToken);
+}
+```
+
+`BindFieldsExplicitly()` is important with a rich domain. Without it, HotChocolate binds every public member, *including behaviour*. `UpdatePowers` and `PopDomainEvents` would show up as fields in your public API. Any domain method added later would quietly join the API too. With a rich domain, explicit binding isn't optional.
+
+The `GetTeamAsync` method adds a `team` field to `Hero`. Notice the hero's `TeamId` foreign key isn't exposed. Clients follow the `team` edge instead.
+
+`HeroType` lives at the feature level (`Features/Heroes/`), not inside a slice. Every hero slice returns this one type. That's the point of a graph: one `Hero`, whichever field led the client to it. It's the one place where GraphQL nudged me away from "everything lives in the slice", and I think it's the right call.
+
+## DataLoaders and the N+1 problem
+
+That `ITeamByIdDataLoader` above is doing important work. Take this query:
+
+```graphql
+query {
+  heroes(first: 10) {
+    nodes {
+      alias
+      team { name }
+    }
+  }
+}
+```
+
+Done naively, that's 1 query for the heroes and then 1 query per hero for its team. 11 queries for 10 heroes. That's the classic N+1 problem, and GraphQL makes it very easy to hit, because the client controls the shape of the query.
+
+A DataLoader collects all the keys requested during one execution and loads them in a single batch:
+
+```csharp
+public static class HeroDataLoaders
+{
+    [DataLoader]
+    public static async Task<Dictionary<TeamId, Hero[]>> GetHeroesByTeamIdAsync(
+        IReadOnlyList<TeamId> teamIds,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+        => await dbContext.Heroes
+            .Where(h => h.TeamId != null && teamIds.Contains(h.TeamId.Value))
+            .GroupBy(h => h.TeamId!.Value)
+            .Select(g => new { g.Key, Heroes = g.OrderBy(h => h.Name).ToArray() })
+            .ToDictionaryAsync(g => g.Key, g => g.Heroes, cancellationToken);
+}
+```
+
+The source generator turns that method into an `IHeroesByTeamIdDataLoader` you can inject. Now the query above costs 2 queries, whatever the page size. You can see it in the Aspire dashboard traces. Neat!
+
+It also means `teamById` doesn't need any `Include()` calls. Heroes and missions are only loaded if the client actually asks for them.
+
+### One gotcha: DbContext and parallel resolvers
+
+GraphQL resolves sibling fields in parallel. A `DbContext` only allows one operation at a time. Put those two facts together and you get `A second operation was started on this context instance before a previous operation completed`.
+
+The fix is to register a `DbContext` *factory* and tell HotChocolate to use it:
+
+```csharp
+services.AddDbContextFactory<ApplicationDbContext>(/* ... */, ServiceLifetime.Scoped);
+
+builder.AddGraphQL()
+    .RegisterDbContextFactory<ApplicationDbContext>();
+```
+
+Now each resolver that asks for an `ApplicationDbContext` gets its own instance. The resolver code doesn't change at all.
+
+## Mutations and typed errors
+
+This is the part I enjoyed the most, because it plays so well with the result pattern.
+
+In GraphQL, a mutation that breaks a business rule still returns `200 OK`. The traditional approach is to put the failure in the `errors` array at the top level of the response. The problem is that those errors are untyped. The client gets a message string and has to guess.
+
+HotChocolate's mutation conventions take a better approach. Each mutation declares the errors it can return with `[Error<T>]`, and they become a **union type** in the payload. Here's `executeMission`:
+
+```csharp
+[MutationType]
+public static partial class ExecuteMissionMutation
+{
+    [Error<InputValidationError>]
+    [Error<NotFoundError>]
+    [Error<ConflictError>]
+    public static async Task<Team> ExecuteMissionAsync(
+        ExecuteMissionInput input,
+        IValidator<ExecuteMissionInput> validator,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(input, cancellationToken);
+
+        var team = await dbContext.Teams
+                       .WithSpecification(TeamSpec.ById(input.TeamId))
+                       .FirstOrDefaultAsync(cancellationToken)
+                   ?? throw new NotFoundException(TeamErrors.NotFound);
+
+        team.ExecuteMission(input.Description).ThrowOnError();
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return team;
+    }
+}
+```
+
+`team.ExecuteMission()` is the untouched domain method. It returns an `ErrorOr<Success>`. `ThrowOnError()` is a small extension that maps the ErrorOr error type to the matching GraphQL error (`NotFound` to `NotFoundError`, `Conflict` to `ConflictError`). The original error code from the domain flows straight through.
+
+Send a team that's already on a mission, and you get this:
+
+```graphql
+mutation {
+  executeMission(input: { teamId: "01a0ffbd-404e-7ca9-9011-4281dbe780d6", description: "Save the day" }) {
+    team { status }
+    errors {
+      __typename
+      ... on ConflictError { code message }
+    }
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "executeMission": {
+      "team": null,
+      "errors": [
+        {
+          "__typename": "ConflictError",
+          "code": "Team.NotAvailable",
+          "message": "The team is currently not available for a new mission"
+        }
+      ]
+    }
+  }
+}
+```
+
+The client knows *exactly* which errors are possible, because they're in the schema. It can switch on `__typename` and handle each one, the same way it handles any other data in the response.
+
+FluentValidation failures work the same way. Send a hero with an empty name and a power level of 99, and both failures come back in one typed error:
+
+```json
+{
+  "data": {
+    "createHero": {
+      "hero": null,
+      "errors": [
+        {
+          "__typename": "InputValidationError",
+          "message": "One or more input fields are invalid.",
+          "failures": [
+            { "field": "Name", "message": "'Name' must not be empty." },
+            { "field": "Powers[0].PowerLevel", "message": "'Power Level' must be between 1 and 10. You entered 99." }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+IMO this is much nicer than mapping everything to a `400` or `409` and hoping the client reads the problem details.
+
+_NOTE: Not finding something in a **query** is not an error. `teamById` with an unknown ID returns `null` with no errors. "There is no such team" is a valid answer to a valid question. A **mutation** on a missing team returns a `NotFoundError`, because the client asked for a change that can't happen._
+
+## Strongly typed IDs as GraphQL scalars
+
+The template uses [Vogen](https://github.com/SteveDunn/Vogen) for strongly typed IDs, so a `HeroId` can't be passed where a `TeamId` is expected. I wanted that same safety at the API boundary.
+
+Each ID gets a custom scalar (`HeroId`, `TeamId`, `MissionId`), bound in the GraphQL setup:
+
+```csharp
+builder.AddGraphQL()
+    .BindRuntimeType<HeroId, HeroIdType>()
+    .BindRuntimeType<TeamId, TeamIdType>()
+    .BindRuntimeType<MissionId, MissionIdType>();
+```
+
+Now, if a client passes a hero ID into `teamById`, the query is rejected during validation, before any of my code runs:
+
+```json
+{
+  "errors": [
+    {
+      "message": "The variable `h` is not compatible with the type of the current location.",
+      "extensions": {
+        "variableType": "HeroId!",
+        "locationType": "TeamId!"
+      }
+    }
+  ]
+}
+```
+
+Both values are GUIDs, and the schema still catches it. That's primitive obsession solved all the way out to the client. 😀
+
+_NOTE: Without the explicit binding, HotChocolate infers an object type from the Vogen struct, and the schema fails to build on a duplicate name. Every new ID type needs its own scalar and a `BindRuntimeType` call._
+
+## Subscriptions, powered by domain events
+
+GraphQL subscriptions let a client hold a connection open (over WebSockets) and receive data whenever something happens on the server. I wanted to see if the existing domain events could drive one without the domain knowing anything about it.
+
+The `PowerLevelUpdatedEvent` already existed, with a handler in the Teams feature that recalculates the team's total. All I had to do was add a *second* handler, in the Heroes feature, that publishes the hero to a subscription topic:
+
+```csharp
+public sealed class PowerLevelUpdatedPublisher(ITopicEventSender sender)
+    : IDomainEventHandler<PowerLevelUpdatedEvent>
+{
+    public async Task HandleAsync(PowerLevelUpdatedEvent domainEvent, CancellationToken cancellationToken)
+    {
+        await sender.SendAsync(
+            nameof(PowerLevelUpdatedSubscription.HeroPowerLevelUpdated),
+            domainEvent.Hero,
+            cancellationToken);
+    }
+}
+```
+
+And the subscription itself:
+
+```csharp
+[SubscriptionType]
+public static partial class PowerLevelUpdatedSubscription
+{
+    [Subscribe]
+    public static Hero HeroPowerLevelUpdated([EventMessage] Hero hero) => hero;
+}
+```
+
+That's it. The `UpdateHero` mutation doesn't know the subscription exists. The Teams handler doesn't know the Heroes handler exists. The domain doesn't know about either of them. Each slice reacts to the event on its own.
+
+Here it is running in Nitro. The top tab subscribes to `heroPowerLevelUpdated`. The bottom tab runs `updateHero` to change Wonder Woman's powers, twice. Each time, the new power level is pushed to the top tab:
+
+<figure>
+  <video
+    src="/static/images/vertical-slice-architecture-with-graphql/subscription-demo.mp4"
+    poster="/static/images/vertical-slice-architecture-with-graphql/subscription-demo-poster.jpg"
+    autoPlay
+    loop
+    muted
+    playsInline
+    controls
+    width="100%"
+  />
+  <figcaption>
+    Figure: The heroPowerLevelUpdated subscription receiving two events, each raised by an updateHero mutation in another tab
+  </figcaption>
+</figure>
+
+And because the Teams handler ran too, the X-Men's `totalPowerLevel` is now 24 (Wonder Woman's 19 plus Gr's 5). No mutation set that number. The domain event did.
+
+_NOTE: The template uses the in-memory subscription provider, which only works with a single instance. Before you scale out, swap it for Redis or another distributed provider._
+
+## When not to use GraphQL
+
+I like GraphQL a lot. But I wouldn't reach for it on every project. Here's what you're signing up for.
+
+### HTTP caching mostly goes away
+
+Everything is a `POST` to one URL, so CDNs and browser caches can't help you. Persisted queries can get some of this back, but it's extra work. The new HTTP `QUERY` method should help here too, because its responses are cacheable. But servers, CDNs and client libraries all need to support it first.
+
+### Status codes don't mean much
+
+A query that's invalid (like the `HeroId` example above) gets a `400` if the client accepts the newer `application/graphql-response+json` content type, but a `200` with plain `application/json`. A broken business rule is *always* a `200`. Your monitoring, alerting and API gateway rules need to look at the response body, not the status code. Anyone used to REST will trip over this at least once.
+
+### Clients can write expensive queries
+
+A client can nest `teams { heroes { team { heroes { ... } } } }` as deep as it likes. You need depth limits, cost analysis and page size caps. HotChocolate 16 ships with cost analysis on by default (you can see the `@cost` directives in the schema), and the template caps page sizes at 50. But it's something you have to think about.
+
+### N+1 is easy to hit
+
+Every relationship needs a DataLoader. Forget one and a single query can fire hundreds of SQL statements.
+
+### More moving parts
+
+Schema design, DataLoaders, scalars, error unions, subscription providers. There's more to learn than with a REST controller, and the whole team needs to learn it.
+
+### Your consumers might not want it
+
+If the API is consumed by other back-end services, third parties, or simple CRUD (Create, Read, Update, Delete) screens, REST plus OpenAPI is simpler and everybody already knows it.
+
+My rule of thumb: GraphQL shines when you have a rich, connected domain and front-end clients (especially more than one) that need different views of it. For a simple service-to-service API, I'd still pick REST.
+
+## Summary
+
+I went into this wanting to know if GraphQL plays nicely with Vertical Slice Architecture and a rich DDD domain. The short answer is yes, and better than I expected:
+
+- The domain barely changed. The only real change was removing a hidden dependency on FastEndpoints. Every aggregate method, invariant and error stayed the same.
+- Slices map naturally onto fields. Each slice contributes one query, mutation or subscription, and HotChocolate's source generator wires it in without a central list.
+- The result pattern maps onto typed errors. ErrorOr errors become union members in the mutation payload, with the domain's error codes intact.
+- Strongly typed IDs become scalars, so ID mix-ups are caught before your code even runs.
+- Domain events can drive subscriptions with one extra handler and zero changes to the domain.
+- HotChocolate 16 removed a lot of code. Paging, filtering and sorting replaced about 330 lines of custom code.
+
+The places where GraphQL pushed back were all at the edges: object types living at the feature level instead of in a slice, the `DbContext` factory, and needing explicit allow-lists everywhere so the domain doesn't leak into the schema.
+
+If you want to try it yourself, clone the repo and open Nitro. I've put together a test plan that walks through every query, mutation and the subscription, including all the failure paths. Give it a try and let me know how you go.
+
+## Resources
+
+- [SSW.VerticalSliceArchitecture.GraphQL](https://github.com/danielmackay/SSW.VerticalSliceArchitecture.GraphQL) - my GraphQL fork of the template
+- [SSW.VerticalSliceArchitecture](https://github.com/SSWConsulting/SSW.VerticalSliceArchitecture) - the original REST template
+- [SSW Rules to Better Vertical Slice Architecture](https://www.ssw.com.au/rules/rules-to-better-vertical-slice-architecture/)
+- [HotChocolate documentation](https://chillicream.com/docs/hotchocolate)
+- [HotChocolate mutation conventions](https://chillicream.com/docs/hotchocolate/defining-a-schema/mutations#conventions)
+- [HotChocolate DataLoaders](https://chillicream.com/docs/hotchocolate/fetching-data/dataloader)
+- [GraphQL specification](https://spec.graphql.org/)
+- [GraphQL Cursor Connections (Relay)](https://relay.dev/graphql/connections.htm)
+- [FastEndpoints - From Zero to Hero](/blog/fastendpoints-from-zero-to-hero)
+- [DDD - Modelling Aggregates vs Entities](/blog/ddd-modelling-aggregates-vs-entities)
+- [EF Core Migrations in Aspire with AddEFMigrations](/blog/ef-core-migrations-in-aspire-with-addefmigrations)
