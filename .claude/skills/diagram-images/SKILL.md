@@ -14,12 +14,13 @@ Five steps, in order. The bundled `scripts/render.sh` and the two starter templa
 
 ### 1. Pick (or invent) a template
 
-Two archetypes ship with this skill:
+Three archetypes ship with this skill:
 
 | Template                                | Best for                                              |
 |-----------------------------------------|-------------------------------------------------------|
 | `templates/numbered-list.html`          | Ordered hierarchies, prioritised lists, layered stacks (e.g. "5 layers of config precedence", "3 levels of caching"). Each row is a numbered circle + title + description. Some rows can be "weak" (soft circles) and others "strong" (filled circles). |
 | `templates/horizontal-flow.html`        | Parallel flows / pipelines / process steps shown side-by-side as stacked cards. Each card: header + horizontal `[source] → [orchestrator] → [target]` flow with mechanism labels on arrows. Optional unifying band underneath summarising the shared outcome. |
+| `templates/decision-ladder.html`        | "First yes wins" decision ladders. Each row: numbered circle + question + detail, with the yes-outcome as a pill on the right and a "No" connector down to the next row. The last row can be a dashed "Otherwise" fallback. Render at `1424` wide; 5 rows ≈ `1100` tall. |
 
 If neither archetype fits, **invent a new template from scratch** but reuse the brand tokens (see `references/brand-tokens.md`). The two existing templates are starting points, not constraints. Don't force-fit a diagram into the wrong shape.
 
@@ -125,6 +126,7 @@ Save invented templates to `.claude/skills/diagram-images/templates/` so future 
 - **More than 2-3 sentences of prose to explain a sequence/hierarchy/comparison?** A diagram will land better. Offer one proactively.
 - **Showing a flow (X → Y → Z)?** `horizontal-flow.html`.
 - **Showing a stack / list / priority order?** `numbered-list.html`.
+- **Showing questions asked in order where the first yes decides?** `decision-ladder.html`.
 - **Showing both at once?** Probably two diagrams — don't cram into one.
 - **Just illustrating a single concept?** A static screenshot of the running thing usually beats a diagram. Skip the skill.
 
