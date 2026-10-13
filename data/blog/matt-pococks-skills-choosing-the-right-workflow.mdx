@@ -20,9 +20,9 @@ The course presents a main workflow. Grill the idea, write a spec, slice it into
 
 Some days I'm fixing a single validation rule. Some days I'm building a small feature I can finish in one sitting. And every now and then I'm staring at a huge feature with no idea where to start. Running the full spec-and-tickets ceremony on a one-line fix is overkill. Going straight to `/implement` on a feature that won't fit in one context window ends in tears. 🤷
 
-So how do you know which workflow to use? That's what this post is about. I turned my notes from the course into an interactive wizard. Answer up to four questions and it tells you which workflow fits the job, which skills to run, and where to clear your context. After that, we'll walk through each of the five workflows and the traps to watch for.
+So how do you adjust the workflow based on the task at hand? That's what this post is about. I turned my notes from the course into an interactive wizard. Answer up to four questions and it tells you which workflow fits the job, which skills to run, and where to clear your context. After that, we'll walk through each of the five workflows and the traps to watch for.
 
-_NOTE: Everything here is based on the skills plugin v1.3.1 (commit `49dd158`). The skills change often, so if this post and a skill's `SKILL.md` disagree, the `SKILL.md` wins._
+_NOTE: This post is based on skills v1.3.1. The skills change often, so check the latest versions._
 
 ## Prerequisites
 
@@ -36,6 +36,7 @@ Before we start bending the main flow, here's what's in it. These are the skills
 
 | Skill               | What it does                                                                                                                       | Who runs it      |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `/wayfinder`        | Multi-session planning for work too foggy to grill in one go                                                                       | You              |
 | `/grill-with-docs`  | Interviews you about every open decision, each with a recommended answer. Records terms in `GLOSSARY.md` and decisions in ADRs     | You              |
 | `/prototype`        | Throwaway code that answers one design question you can't settle by talking                                                        | You or the agent |
 | `/to-spec`          | Turns the grilled conversation into a spec issue. No interview, just synthesis                                                     | You              |
@@ -46,7 +47,6 @@ Before we start bending the main flow, here's what's in it. These are the skills
 | `/code-review`      | Two parallel subagents. One checks your documented coding standards, the other checks the code against the spec                    | You or the agent |
 | `/pr`               | Shapes the PR body: a summary visual, before/after evidence and the merge danger                                                   | The agent        |
 | `/retro`            | Reads the session and proposes fixes to the agent's environment (lint rules, coding standards, steering files)                     | You              |
-| `/wayfinder`        | Multi-session planning for work too foggy to grill in one go                                                                       | You              |
 
 The "who runs it" column matters more than it looks. User-invoked skills (the ones you type) orchestrate. Model-invoked skills like `/tdd`, `/code-review` and `/pr` hold the discipline, and the agent can reach for them on its own. A user-invoked skill can call model-invoked ones, but never another user-invoked one.
 
@@ -97,7 +97,7 @@ With no spec, the Spec axis of `/code-review` just reports "no spec available". 
 
 ### Fits one session: grill, then build
 
-**Use it when** some decisions are still open, but planning and building together will fit in one context window. IMO this is the workflow most day-to-day features should use.
+**Use it when** some decisions are still open, but planning and building together will fit in one context window.
 
 ```text
 /grill-with-docs     rounds of numbered questions until the design tree is empty
@@ -140,6 +140,8 @@ The tickets are disposable. Each one is a tracer-bullet slice through every laye
 ### Multi-session, parallel: build a task graph
 
 **Use it when** you've done the same planning as the main flow, the tickets form a real graph, and you'd rather orchestrate a fleet than start each session by hand. People tend to cite five or more tickets as the point where this pays off.
+
+If you've ever run the multi-session workflow and found yourself babysitting the agent, sitting there waiting to type `/implement` on the next ticket, you'll know it gets real old real quick. `/implement-spec` takes most of that away. You hit the button, walk away and get on with other work. And if you put in a quality grilling session up front, you're all but guaranteed a quality result at the end.
 
 ```text
 /grill-with-docs → /to-spec → /to-tickets    (all in one window, as above)
