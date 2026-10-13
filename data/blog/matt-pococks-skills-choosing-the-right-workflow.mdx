@@ -1,14 +1,14 @@
 ---
-title: "Picking the Right AI Coding Workflow with Matt Pocock's Skills: From Quick Fixes to Huge Features"
+title: "Matt Pocock's Skills: Choosing The Right Workflow"
 date: '2026-10-13'
 tags: ['ai', 'claude-code', 'agent-skills', 'productivity', 'vibe-coding']
 draft: true
 summary: "Matt Pocock's skills give you one main flow for AI-assisted development, but not every job fits it. Answer up to four questions in an interactive wizard to find the right workflow, from a one-behaviour fix to a huge, foggy feature."
-images: ['/static/images/picking-the-right-ai-coding-workflow-with-matt-pococks-skills/banner.png']
+images: ['/static/images/matt-pococks-skills-choosing-the-right-workflow/banner.png']
 layout: PostLayout
 ---
 
-![Banner](/static/images/picking-the-right-ai-coding-workflow-with-matt-pococks-skills/banner.png)
+![Banner](/static/images/matt-pococks-skills-choosing-the-right-workflow/banner.png)
 
 <TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
 
@@ -105,8 +105,6 @@ With no spec, the Spec axis of `/code-review` just reports "no spec available". 
 /implement           "the plan is in this conversation"
   ↓ continue
 open a PR            body in /pr shape
-  ↓ same session, before you clear
-/retro               environment fixes, most severe first
 ```
 
 `/grill-with-docs` runs `/grilling` and `/domain-modeling` together. Each round asks every decision whose prerequisites are settled, and "yes" accepts its recommended answer. It writes `GLOSSARY.md` and ADRs as terms settle, so the next session (and the next developer) speaks the same language.
@@ -131,8 +129,6 @@ If a question can only be answered by running something (a state model, or a UI 
 /implement #N        one frontier ticket; drives /tdd + /code-review, commits
   ↓ /clear, then the next frontier ticket ↺
 open the PR          body in /pr shape
-  ↓ same session, or point it at the session log
-/retro               especially after a build that went sideways
 ```
 
 The spec keeps the reasoning alive after the grilling session is cleared. It has the problem, the solution, a long list of user stories, implementation and testing decisions, and what's out of scope. When you review it, read the test seams and the Out of Scope section first. Mistakes are cheapest to catch there.
@@ -149,8 +145,6 @@ The tickets are disposable. Each one is a tracer-bullet slice through every laye
 /grill-with-docs → /to-spec → /to-tickets    (all in one window, as above)
   ↓ /clear
 /implement-spec      integration branch, one worktree per ready ticket, a merger subagent
-  ↓ same session
-/retro               review what the orchestration surfaced
 ```
 
 `/implement-spec` reads the tickets as a task graph and creates an integration branch. Implementer subagents run in the background, one per frontier ticket, each in its own worktree and each driving `/tdd`. A merger subagent lands each result, and when the frontier changes, more implementers start. At the end, one `/code-review` runs over the whole integration branch, the fixes go in, and the draft PR is marked ready.
@@ -173,8 +167,6 @@ If you've read my post on [parallel vibe coding with git worktrees](/blog/parall
 /to-tickets                implementation slices
   ↓ /clear
 /implement #N  or  /implement-spec
-  ↓ …
-/retro
 ```
 
 `/wayfinder` charts a `wayfinder:map` issue on your tracker, with child decision tickets wired up with blocking links. Each ticket is resolved by its type: **grilling** (you're in the loop, and it's the default), **prototype** (also you), **research** (runs AFK in a background subagent) or **task** (does work that unblocks a decision). Wayfinder's output is a set of decisions. When the map clears, it hands off and doesn't build anything.
@@ -182,6 +174,14 @@ If you've read my post on [parallel vibe coding with git worktrees](/blog/parall
 When you get to `/to-spec`, point it at the map issue, not at individual tickets. Going straight from the map to `/implement` throws away all that linked detail.
 
 **Watch out:** the common mistake is using wayfinder on a well-scoped feature. It's slower and denser than grilling. If the opening grill finds no fog, it stops and tells you a map isn't needed. Also scope each map to one bounded destination (think one epic), not the whole product. Otherwise later tickets rest on assumptions that earlier ones overturn, and you've reinvented waterfall. 😉
+
+## Close the loop with `/retro`
+
+None of the workflows above end with `/retro`, but you can run it at the end of any of them. Run it before you clear, or point it at the session log afterwards.
+
+It reads the session and proposes fixes to the agent's environment, most severe first: lint rules, coding standards, steering files. Mechanical mistakes become deterministic checks (a lint rule, a pre-commit hook or a CI job). Judgement calls go into `CODING_STANDARDS.md`, which `/code-review` reads next time.
+
+It only proposes and never applies, so you choose what to adopt. It can also invent generic advice to fill its categories, so drop any candidate you can't trace back to a specific moment in the session.
 
 ## Between phases: continue, clear, hand off, delegate or compact?
 
@@ -191,12 +191,12 @@ Go through these top to bottom. The first _yes_ wins.
 
 <figure>
   <img
-    src="/static/images/picking-the-right-ai-coding-workflow-with-matt-pococks-skills/phase-boundaries-light.png"
+    src="/static/images/matt-pococks-skills-choosing-the-right-workflow/phase-boundaries-light.png"
     alt="Decision ladder for a phase boundary. 1: Does the next phase need this context? Yes, continue. No, go to 2: Is the context irrelevant to what comes next? Yes, /clear. No, go to 3: Does something have to travel? Yes, /handoff. No, go to 4: Can it run AFK? Yes, hand it to a subagent. No, go to 5: otherwise /compact with an instruction."
     className="block dark:hidden"
   />
   <img
-    src="/static/images/picking-the-right-ai-coding-workflow-with-matt-pococks-skills/phase-boundaries-dark.png"
+    src="/static/images/matt-pococks-skills-choosing-the-right-workflow/phase-boundaries-dark.png"
     alt="Decision ladder for a phase boundary. 1: Does the next phase need this context? Yes, continue. No, go to 2: Is the context irrelevant to what comes next? Yes, /clear. No, go to 3: Does something have to travel? Yes, /handoff. No, go to 4: Can it run AFK? Yes, hand it to a subagent. No, go to 5: otherwise /compact with an instruction."
     className="hidden dark:block"
   />
@@ -211,7 +211,6 @@ A few things that aren't obvious from the skill names:
 - **Tell `/implement` where the plan is.** Its `SKILL.md` talks about a spec or tickets. When the plan only lives in the conversation, say so.
 - **Some skills are hidden from the agent.** 16 of the 27 skills are user-invoked only, so they don't appear in the agent's skill list and it may tell you they aren't installed. Type them anyway.
 - **Don't `/triage` the tickets from `/to-tickets`.** Triage is for raw issues you didn't create. Tickets from `/to-tickets` are already agent-ready.
-- **`/retro` proposes, it never applies.** It can also invent generic advice to fill its categories. Drop any candidate you can't trace back to a specific moment in the session.
 
 ## Summary
 

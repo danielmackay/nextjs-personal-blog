@@ -99,13 +99,6 @@ export const STAGES: Stage[] = [
   { label: 'Ship', nodes: [{ id: 'pr', name: '/pr', sub: 'PR body shape' }] },
 ]
 
-// /retro fits the end of every workflow, so the wizard shows it once as a note instead of
-// repeating it as the last step of each sequence.
-export const RETRO_NOTE = {
-  lead: 'Optional, at the end of any workflow: `/retro`.',
-  body: "Run it before you clear (or point it at the session log). It reads the session and proposes fixes to the agent's environment, most severe first: lint rules, coding standards, steering files. It only proposes, so you choose what to adopt.",
-}
-
 export const FIRST_QUESTION: QuestionId = 'decided'
 
 export const QUESTIONS: Record<QuestionId, Question> = {

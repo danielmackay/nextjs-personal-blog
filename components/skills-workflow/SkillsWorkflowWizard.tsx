@@ -6,7 +6,6 @@ import {
   FIRST_QUESTION,
   FLOWS,
   QUESTIONS,
-  RETRO_NOTE,
   STAGES,
   type Flow,
   type FlowId,
@@ -206,13 +205,6 @@ function Result({
       </p>
 
       <Sequence items={flow.sequence} />
-
-      <div className="mb-4 rounded-lg border border-dashed border-primary-600 bg-white px-3 py-2.5 text-sm text-gray-700 dark:border-primary-400 dark:bg-gray-950 dark:text-gray-300">
-        <strong className="text-gray-900 dark:text-gray-100">
-          <Inline text={RETRO_NOTE.lead} />
-        </strong>{' '}
-        <Inline text={RETRO_NOTE.body} />
-      </div>
 
       <div className="rounded-lg border border-orange-300 bg-orange-50 px-3 py-2.5 text-sm text-orange-950 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-100">
         <strong>
