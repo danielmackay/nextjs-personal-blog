@@ -189,11 +189,19 @@ Every workflow above has arrows between the steps, and each arrow is a decision 
 
 Go through these top to bottom. The first _yes_ wins.
 
-1. **Can you continue?** Continue if the next phase needs this one as a primary source, or still fits in the smart zone. Grilling → implementation is the standard yes, because implementation wants the reasoning verbatim, not a summary of it. Continuing costs nothing and loses nothing, so rule it out first.
-2. **Is the context irrelevant to what comes next?** Then `/clear`. It's the cheapest move and the old session stays resumable. Get it wrong though and it's one-way: clear a relevant context and you lose the _why_ behind the build.
-3. **Does something have to travel?** Then `/handoff`. Only for a new harness, a new directory or repo, a colleague, or a side task you're forking mid-phase. Portability is all it buys you.
-4. **Can it run AFK?** Then hand it to a subagent. Tightly scoped work with no steering needed. Automated review is the standard case.
-5. **Otherwise**, `/compact` with an instruction, e.g. `/compact we're going to QA this area`. It's the default, but it should be the last thing you reach for. The failure mode is a fresh session that's confidently wrong about a decision the summary flattened.
+<figure>
+  <img
+    src="/static/images/picking-the-right-ai-coding-workflow-with-matt-pococks-skills/phase-boundaries-light.png"
+    alt="Decision ladder for a phase boundary. 1: Does the next phase need this context? Yes, continue. No, go to 2: Is the context irrelevant to what comes next? Yes, /clear. No, go to 3: Does something have to travel? Yes, /handoff. No, go to 4: Can it run AFK? Yes, hand it to a subagent. No, go to 5: otherwise /compact with an instruction."
+    className="block dark:hidden"
+  />
+  <img
+    src="/static/images/picking-the-right-ai-coding-workflow-with-matt-pococks-skills/phase-boundaries-dark.png"
+    alt="Decision ladder for a phase boundary. 1: Does the next phase need this context? Yes, continue. No, go to 2: Is the context irrelevant to what comes next? Yes, /clear. No, go to 3: Does something have to travel? Yes, /handoff. No, go to 4: Can it run AFK? Yes, hand it to a subagent. No, go to 5: otherwise /compact with an instruction."
+    className="hidden dark:block"
+  />
+  <figcaption>Figure: At a phase boundary, work down the ladder. The first yes decides what happens to your context.</figcaption>
+</figure>
 
 ## Gotchas worth knowing
 

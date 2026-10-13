@@ -15,7 +15,6 @@ export type NodeId =
   | 'tdd'
   | 'code-review'
   | 'pr'
-  | 'retro'
 
 // on = you type it, auto = runs inside another step, opt = optional on this path.
 // Nodes missing from a flow's map are not used on that path.
@@ -98,8 +97,14 @@ export const STAGES: Stage[] = [
     nodes: [{ id: 'code-review', name: '/code-review', sub: 'Standards + Spec' }],
   },
   { label: 'Ship', nodes: [{ id: 'pr', name: '/pr', sub: 'PR body shape' }] },
-  { label: 'Learn', nodes: [{ id: 'retro', name: '/retro', sub: 'fix the environment' }] },
 ]
+
+// /retro fits the end of every workflow, so the wizard shows it once as a note instead of
+// repeating it as the last step of each sequence.
+export const RETRO_NOTE = {
+  lead: 'Optional, at the end of any workflow: `/retro`.',
+  body: "Run it before you clear (or point it at the session log). It reads the session and proposes fixes to the agent's environment, most severe first: lint rules, coding standards, steering files. It only proposes, so you choose what to adopt.",
+}
 
 export const FIRST_QUESTION: QuestionId = 'decided'
 
@@ -195,7 +200,6 @@ export const FLOWS: Flow[] = [
       tdd: { state: 'auto' },
       'code-review': { state: 'auto' },
       pr: { state: 'auto', tag: 'agent applies' },
-      retro: { state: 'on' },
     },
     sequence: [
       {
@@ -211,8 +215,6 @@ export const FLOWS: Flow[] = [
       },
       { kind: 'hop', move: 'continue' },
       { kind: 'step', cmd: 'open a PR', what: 'Body in `/pr` shape', auto: true },
-      { kind: 'hop', move: 'same session', note: 'before you clear' },
-      { kind: 'step', cmd: '/retro', what: 'Suggests environment fixes, most severe first' },
     ],
     trap: {
       lead: 'Don\'t add `/to-spec` "for safety".',
@@ -235,7 +237,6 @@ export const FLOWS: Flow[] = [
       tdd: { state: 'auto' },
       'code-review': { state: 'auto' },
       pr: { state: 'auto', tag: 'agent applies' },
-      retro: { state: 'on' },
     },
     sequence: [
       { kind: 'step', cmd: '/grill-with-docs', what: 'Shared understanding + vocabulary' },
@@ -259,8 +260,6 @@ export const FLOWS: Flow[] = [
       },
       { kind: 'hop', move: '/clear', note: 'then the next frontier ticket ↺' },
       { kind: 'step', cmd: 'open the PR', what: 'Body in `/pr` shape', auto: true },
-      { kind: 'hop', move: 'same session', note: 'or point it at the session log' },
-      { kind: 'step', cmd: '/retro', what: 'Especially after a build that went sideways' },
     ],
     trap: {
       lead: 'The spec issue gets `ready-for-agent`,',
@@ -283,7 +282,6 @@ export const FLOWS: Flow[] = [
       tdd: { state: 'auto', tag: 'in each subagent' },
       'code-review': { state: 'auto', tag: 'once, at the end' },
       pr: { state: 'auto', tag: 'draft → ready' },
-      retro: { state: 'on' },
     },
     sequence: [
       { kind: 'step', cmd: '/grill-with-docs', what: 'Shared understanding + vocabulary' },
@@ -301,8 +299,6 @@ export const FLOWS: Flow[] = [
         cmd: '/implement-spec',
         what: 'Integration branch, one worktree per ready ticket, a merger subagent, one `/code-review`, fixes',
       },
-      { kind: 'hop', move: 'same session' },
-      { kind: 'step', cmd: '/retro', what: 'Review what the orchestration surfaced' },
     ],
     trap: {
       lead: 'Not for small work.',
@@ -327,7 +323,6 @@ export const FLOWS: Flow[] = [
       tdd: { state: 'auto' },
       'code-review': { state: 'auto' },
       pr: { state: 'auto', tag: 'agent applies' },
-      retro: { state: 'on' },
     },
     sequence: [
       {
@@ -355,8 +350,6 @@ export const FLOWS: Flow[] = [
         cmd: '/implement #N  or  /implement-spec',
         what: 'As in the multi-session flows',
       },
-      { kind: 'hop', move: '…' },
-      { kind: 'step', cmd: '/retro', what: 'Close the loop' },
     ],
     trap: {
       lead: 'The common mistake is using wayfinder on a well-scoped feature.',
