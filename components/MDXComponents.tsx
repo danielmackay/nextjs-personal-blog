@@ -10,6 +10,7 @@ import BicepSeriesResources from '@/components/bicep/BicepSeriesResources'
 import BitBucketPipelinesSeriesHeader from '@/components/bit-bucket/BitBucketPipelinesSeriesHeader'
 import BitBucketPipelinesSeriesResources from '@/components/bit-bucket/BitBucketPipelinesSeriesResources'
 import ModularMonolithSeriesHeader from '@/components/modular-monolith/ModularMonolithSeriesHeader'
+import SkillsWorkflowWizard from '@/components/skills-workflow/SkillsWorkflowWizard'
 
 export const components: MDXComponents = {
   Image,
@@ -23,4 +24,5 @@ export const components: MDXComponents = {
   BitBucketPipelinesSeriesHeader,
   BitBucketPipelinesSeriesResources,
   ModularMonolithSeriesHeader,
+  SkillsWorkflowWizard,
 }

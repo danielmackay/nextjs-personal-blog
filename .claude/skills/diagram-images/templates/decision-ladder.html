@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Diagram</title>
+<script>
+  // Read ?theme= from URL and set the root attribute before paint.
+  document.documentElement.dataset.theme =
+    new URLSearchParams(location.search).get('theme') === 'dark' ? 'dark' : 'light';
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --text: #111827;
+    --text-2: #374151;
+    --primary: #0EA5E9;
+    --primary-strong: #0284C7;
+    --primary-soft: #E0F2FE;
+    --primary-soft-text: #0369A1;
+    --accent: #EC4899;
+    --accent-soft: #FCE7F3;
+    --divider: #E5E7EB;
+    --mono-bg: #F1F5F9;
+    --node-border: #BAE6FD;
+    --connector: #9CA3AF;
+  }
+  :root[data-theme="dark"] {
+    --text: #F3F4F6;
+    --text-2: #D1D5DB;
+    --primary: #38BDF8;
+    --primary-strong: #0369A1;
+    --primary-soft: #0C4A6E;
+    --primary-soft-text: #7DD3FC;
+    --accent: #F472B6;
+    --accent-soft: #831843;
+    --divider: #1F2937;
+    --mono-bg: #1F2937;
+    --node-border: #0369A1;
+    --connector: #6B7280;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body {
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--text);
+    width: 1400px;
+    padding: 12px;
+  }
+  code {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  /* Each step: number | question + detail | yes outcome */
+  .step {
+    display: grid;
+    grid-template-columns: 80px 1fr 340px;
+    gap: 32px;
+    align-items: center;
+    border: 2px solid var(--node-border);
+    border-radius: 18px;
+    padding: 26px 30px;
+  }
+  .step.last { border-style: dashed; }
+
+  .rank {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 32px;
+    background: var(--primary-soft);
+    color: var(--primary-soft-text);
+  }
+
+  .q {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    margin: 0 0 8px;
+  }
+  .detail {
+    font-size: 23px;
+    line-height: 1.45;
+    color: var(--text-2);
+    margin: 0;
+  }
+  .detail code {
+    font-size: 20px;
+    font-weight: 500;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .outcome {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .outcome .label {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--primary-soft-text);
+  }
+  :root:not([data-theme="dark"]) .outcome .label { color: var(--primary-strong); }
+  .action {
+    display: inline-block;
+    background: var(--primary-strong);
+    color: #fff;
+    font-size: 28px;
+    font-weight: 700;
+    padding: 10px 22px;
+    border-radius: 12px;
+    white-space: nowrap;
+  }
+  .action code { font-size: 26px; font-weight: 600; }
+  .step.last .action {
+    background: transparent;
+    color: var(--text);
+    border: 2px dashed var(--primary-strong);
+  }
+
+  /* "No" connector between steps, aligned under the number column */
+  .no {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    height: 64px;
+    padding-left: 66px; /* centres the line under the 72px circle inside the step padding */
+  }
+  .no .line {
+    width: 3px;
+    height: 100%;
+    background: var(--connector);
+    position: relative;
+  }
+  .no .line::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -2px;
+    transform: translateX(-50%);
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 14px solid var(--connector);
+  }
+  .no span {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+</style>
+</head>
+<body>
+  <!--
+    Decision ladder: questions asked top to bottom, the first "yes" wins.
+    Each .step = number | question + detail | outcome. A .no connector sits between steps.
+    Mark the fallback step (no question, just "otherwise") with class="step last" for a dashed outline.
+    Inline <code> in .detail renders as a pink mono pill; <code> inside .action renders mono on the pill.
+    Wrap hyphenated words in <span style="white-space:nowrap"> so they don't break at the hyphen.
+  -->
+  <div class="step">
+    <div class="rank">1</div>
+    <div>
+      <p class="q">First question?</p>
+      <p class="detail">One or two lines explaining when the answer is yes.</p>
+    </div>
+    <div class="outcome"><span class="label">Yes →</span><span class="action">Outcome</span></div>
+  </div>
+
+  <div class="no"><div class="line"></div><span>No</span></div>
+
+  <div class="step">
+    <div class="rank">2</div>
+    <div>
+      <p class="q">Second question?</p>
+      <p class="detail">Detail with an inline <code>command</code>.</p>
+    </div>
+    <div class="outcome"><span class="label">Yes →</span><span class="action"><code>/command</code></span></div>
+  </div>
+
+  <div class="no"><div class="line"></div><span>No</span></div>
+
+  <div class="step last">
+    <div class="rank">3</div>
+    <div>
+      <p class="q">Otherwise</p>
+      <p class="detail">The fallback when every question above was a no.</p>
+    </div>
+    <div class="outcome"><span class="label">Then →</span><span class="action">Fallback</span></div>
+  </div>
+</body>
+</html>
